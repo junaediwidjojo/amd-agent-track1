@@ -27,12 +27,6 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt \
  && find /install -type d -name "tests" -prune -exec rm -rf {} + \
  && find /install -type d -name "test" -prune -exec rm -rf {} +
 
-# Download a small 3B 4-bit quantized model for local inference
-# Qwen2.5-3B-Instruct Q4_K_M ~2.0 GB — fits comfortably in 4 GB RAM
-RUN mkdir -p /install/models && \
-    curl -L -o /install/models/qwen2.5-3b-instruct-q4_k_m.gguf \
-    "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf"
-
 FROM python:3.12-slim AS runtime
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -49,7 +43,7 @@ ENV PYTHONUNBUFFERED=1 \
     LOCAL_CATEGORIES=sentiment,summarization,ner,factual \
     LOCAL_CONFIDENCE_THRESHOLD=0.75
 
-COPY --from=builder /install/models ./models
+COPY models/qwen2.5-3b-instruct-q4_k_m.gguf ./models/qwen2.5-3b-instruct-q4_k_m.gguf
 COPY --from=builder /install /usr/local
 COPY app/ ./app/
 
