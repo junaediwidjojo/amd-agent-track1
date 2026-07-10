@@ -19,13 +19,13 @@ class StructuredExtractionHandler(BaseHandler):
 
     @property
     def preferred_model_tags(self) -> list[str]:
-        return ["reason", "kimi", "glm"]
+        return ["reason", "glm", "kimi"]
 
     def category_name(self) -> str:
         return "structured_extraction"
 
     def post_process(self, text: str, task: TaskItem) -> str:
-        cleaned = clean_answer(text)
+        cleaned = clean_answer(text, category=self.category_name())
 
         # Try direct parse first
         valid, parsed = validate_json_string(cleaned)

@@ -1,2 +1,3 @@
 Extract named entities. Return valid JSON array of objects with keys "text" and "type".
  Respond in English only.
+Do not show your reasoning, thinking process, or step-by-step analysis. Output only the final answer, nothing else — no preamble, no explanation of your approach.

@@ -7,9 +7,14 @@ import re
 from typing import Any
 
 
+def _normalize_logic_text(text: str) -> str:
+    return text.replace("—", ",").replace("–", ",")
+
+
 def _extract_names(text: str) -> list[str]:
     """Heuristic: extract capitalized words that are likely person names."""
     # Look for patterns like "Three friends, A, B, and C," or "A, B, and C each own"
+    text = _normalize_logic_text(text)
     comma_list_match = re.search(
         r"([A-Z][a-zA-Z]+(?:,\s+[A-Z][a-zA-Z]+)*?(?:,\s+and\s+[A-Z][a-zA-Z]+))",
         text,
@@ -39,19 +44,20 @@ def _extract_names(text: str) -> list[str]:
 
 def _extract_values(text: str, names: list[str]) -> list[str]:
     """Extract possible values (pets, colors, etc.) from the text."""
-    # Look for list after a colon or "different X:"
+    colon_list = re.search(r":\s*([^\.\n]+)", text)
+    if colon_list:
+        raw = colon_list.group(1).strip().rstrip(".")
+        raw = raw.replace(" and ", ", ").replace(" or ", ", ")
+        vals = [v.strip() for v in raw.split(",") if v.strip()]
+        if len(vals) == len(names):
+            return vals
+
     list_match = re.search(r"different\s+\w+(?:\s+\w+)*[:\s]+([a-z,\s]+)", text, re.IGNORECASE)
     if list_match:
         raw = list_match.group(1)
         vals = [v.strip() for v in raw.replace(" and ", ", ").split(",") if v.strip()]
         return vals
 
-    # Fallback: look for lowercase words near the end of the sentence that aren't common stop words
-    # Try to find words after "each own a different" or similar
-    # Extract the last few lowercase words that could be values
-    words = re.findall(r"\b[a-z]+\b", text)
-    # Heuristic: if names are known, values are likely in a list near them
-    # Try to find a comma-separated lowercase list
     raw_lists = re.findall(r"([a-z]+(?:,\s+[a-z]+)*?(?:,\s+and\s+[a-z]+))", text)
     if raw_lists:
         raw = raw_lists[-1]
@@ -89,6 +95,16 @@ def _parse_constraints(text: str, names: list[str], values: list[str]) -> list[d
             if val in [v.lower() for v in values]:
                 constraints.append({"type": "eq", "name": name, "value": val})
 
+        neither_match = re.search(
+            rf"{re.escape(nl)}\s+owns\s+neither\s+(?:the\s+)?([a-z]+)\s+nor\s+(?:the\s+)?([a-z]+)",
+            text_lower,
+        )
+        if neither_match:
+            for val in (neither_match.group(1), neither_match.group(2)):
+                if val in [v.lower() for v in values]:
+                    constraints.append({"type": "neq", "name": name, "value": val})
+
+
     # Fallback: scan for name prefixes (e.g., "Sam" when full name is "Samuel")
     for name in names:
         short = name.lower()[:3]
@@ -114,7 +130,7 @@ def _parse_constraints(text: str, names: list[str], values: list[str]) -> list[d
                     constraints.append({"type": "eq", "name": name, "value": val})
 
     # All different constraint
-    if re.search(r"each\s+(?:own|have|like|drive|live)\s+a\s+different", text_lower):
+    if re.search(r"each\s+(?:own|have|like|drive|live)\s+(?:a\s+different|exactly\s+one)", text_lower):
         constraints.append({"type": "all_different"})
 
     return constraints
@@ -145,11 +161,68 @@ def _solve(names: list[str], values: list[str], constraints: list[dict[str, Any]
     return None
 
 
+
+
+_PLACE_WORDS = {
+    "first": 1,
+    "second": 2,
+    "third": 3,
+    "fourth": 4,
+}
+
+
+def _solve_race_puzzle(text: str) -> tuple[str, float] | None:
+    if not re.search(r"first, second.*third", text, re.IGNORECASE):
+        return None
+    names = _extract_names(text)
+    if len(names) != 3:
+        return None
+
+    text_lower = text.lower()
+    constraints: list[tuple[str, str, object]] = []
+
+    for name in names:
+        nl = name.lower()
+        not_place = re.search(rf"{re.escape(nl)}\s+did not finish\s+(first|second|third)", text_lower)
+        if not_place:
+            constraints.append(("neq_place", name, _PLACE_WORDS[not_place.group(1)]))
+        before = re.search(rf"{re.escape(nl)}\s+finished before\s+([a-z]+)", text_lower)
+        if before:
+            other = before.group(1).title()
+            for candidate in names:
+                if candidate.lower().startswith(before.group(1)):
+                    other = candidate
+                    break
+            constraints.append(("before", name, other))
+
+    for perm in itertools.permutations([1, 2, 3]):
+        assignment = dict(zip(names, perm))
+        ok = True
+        for kind, subject, value in constraints:
+            if kind == "neq_place" and assignment[subject] == value:
+                ok = False
+                break
+            if kind == "before" and assignment[subject] >= assignment[value]:
+                ok = False
+                break
+        if ok:
+            parts = [
+                f"{name}-{next(word.title() for word, rank in _PLACE_WORDS.items() if rank == assignment[name])}"
+                for name in names
+            ]
+            return (", ".join(parts), 1.0)
+    return None
+
+
 def solve_logic(text: str) -> tuple[str, float] | None:
     """Attempt to solve a small logic puzzle deterministically.
 
     Returns (answer_string, confidence) or None.
     """
+    race = _solve_race_puzzle(text)
+    if race is not None:
+        return race
+
     names = _extract_names(text)
     if len(names) < 2:
         return None

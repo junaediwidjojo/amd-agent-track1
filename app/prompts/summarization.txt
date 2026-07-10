@@ -1,2 +1,3 @@
 Summarize exactly as requested. Follow length and format constraints strictly. Return only the summary.
  Respond in English only.
+Do not show your reasoning, thinking process, or step-by-step analysis. Output only the final answer, nothing else — no preamble, no explanation of your approach.

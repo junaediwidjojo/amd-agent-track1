@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from app.fireworks.models import CompletionResult, TaskItem
 from app.handlers.base import BaseHandler
 from app.solvers.logic_solver import solve_logic
@@ -17,7 +19,7 @@ class LogicHandler(BaseHandler):
 
     @property
     def preferred_model_tags(self) -> list[str]:
-        return ["reason", "math", "kimi", "glm", "deepseek"]
+        return ["reason", "math", "glm", "kimi", "deepseek"]
 
     def category_name(self) -> str:
         return "logic"
@@ -29,14 +31,23 @@ class LogicHandler(BaseHandler):
         return super().complete(task)
 
     def post_process(self, text: str, task: TaskItem) -> str:
+        local = solve_logic(task.prompt)
+        if local and local[1] >= 0.9:
+            return local[0]
+        if "name-place" in task.prompt.lower().replace(" ", ""):
+            matches = re.findall(r"([A-Z][a-z]+)-(First|Second|Third)", text, re.IGNORECASE)
+            if len(matches) >= 3:
+                return ", ".join(f"{name}-{place.title()}" for name, place in matches)
         answer = extract_final_answer(text)
-        # For logic puzzles, the answer is usually a single name/word.
-        # Strip any trailing reasoning or punctuation beyond the first real word.
+        if re.match(r"(?i)^(wait|but|let me|from|puzzle|the user)", answer.strip()):
+            return ""
         answer = answer.strip().rstrip(".").rstrip(",")
+        if re.search(r"who owns", task.prompt, re.IGNORECASE):
+            for word in answer.split():
+                if word[0].isupper() and word.isalpha():
+                    return word
         words = answer.split()
         if len(words) > 1:
-            # Heuristic: if it looks like "Diana owns the dog", return just "Diana"
-            # by taking the first capitalized word, otherwise the first word.
             for word in words:
                 if word[0].isupper():
                     return word

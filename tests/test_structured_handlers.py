@@ -2,7 +2,7 @@
 
 from unittest.mock import MagicMock
 
-from app.fireworks.models import TaskItem
+from app.fireworks.models import CompletionMetrics, CompletionResult, TaskItem
 from app.handlers.factual import FactualHandler
 from app.handlers.structured_extraction import StructuredExtractionHandler
 from app.handlers.structured_writing import StructuredWritingHandler
@@ -69,11 +69,17 @@ class TestStructuredWritingHandler:
 
 
 class TestFactualHandlerIdentity:
-    def _handler(self) -> FactualHandler:
-        return FactualHandler(_mock_provider())
+    def _handler(self, provider: MagicMock | None = None) -> FactualHandler:
+        return FactualHandler(provider or _mock_provider())
 
-    def test_identity_short_circuit(self) -> None:
-        handler = self._handler()
+    def test_identity_uses_provider(self) -> None:
+        provider = _mock_provider()
+        provider.complete.return_value = CompletionResult(
+            text="I am an AI agent for the hackathon.",
+            metrics=CompletionMetrics(),
+        )
+        handler = self._handler(provider)
         task = TaskItem(task_id="i1", prompt="As you are for general usage, please introduce who you are.")
         result = handler.complete(task)
-        assert "AMD Developer Hackathon Track 1" in result.text
+        provider.complete.assert_called_once()
+        assert result.text == "I am an AI agent for the hackathon."

@@ -87,6 +87,12 @@ _STRUCTURED_WRITING_PATTERNS = (
     r"\brecommend\b.*\bbenchmark\b",
 )
 
+_FACTUAL_EXPLAIN_PATTERNS = (
+    r"\bexplain\b",
+    r"\bwhat is a\b",
+    r"\bwhat are\b",
+)
+
 _STRUCTURED_EXTRACTION_PATTERNS = (
     r"\breturn\s+.*\bjson\s+object\b",
     r"\bextract\b.*\bkeys\b",
@@ -108,6 +114,8 @@ def _detect_family(prompt: str) -> TaskCategory:
         return TaskCategory.DEBUGGING
     if _matches_any(lower, _CODEGEN_PATTERNS):
         return TaskCategory.CODE_GENERATION
+    if _matches_any(lower, _FACTUAL_EXPLAIN_PATTERNS):
+        return TaskCategory.FACTUAL
     if _matches_any(lower, _MATH_PATTERNS):
         return TaskCategory.MATH
     if _matches_any(lower, _LOGIC_PATTERNS):

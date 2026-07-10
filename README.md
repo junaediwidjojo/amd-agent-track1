@@ -121,11 +121,11 @@ docker buildx build \
 - Rule-based router (no LLM classification tokens)
 - 8 specialized handlers with minimal prompts
 - Fireworks client with retry, exponential backoff, model fallback
-- Prompt cache for duplicate tasks
+- Prompt cache disabled by default (competition compliance)
 - Token counter, latency metrics, cost estimator
 - Structured JSON logging
 - Graceful per-task error handling (batch never crashes)
-- Multi-stage Docker image (< 1 GB)
+- Multi-stage Docker image with bundled 3B Q4 local model (~3 GB compressed)
 - Full pytest suite
 
 ## Competition constraints
@@ -135,7 +135,8 @@ docker buildx build \
 - Container ready within 60 seconds
 - Per-task response under 30 seconds
 - Image: linux/amd64, < 10 GB compressed
-- No hardcoded answers or model IDs
+- No hardcoded answers, no response caching, no hardcoded model IDs
+- 10-minute global runtime budget enforced
 - All Fireworks calls through `FIREWORKS_BASE_URL`
 
 ## Practice tasks

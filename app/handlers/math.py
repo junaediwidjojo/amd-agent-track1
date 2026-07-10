@@ -15,11 +15,11 @@ class MathHandler(BaseHandler):
 
     @property
     def max_tokens(self) -> int:
-        return 256
+        return 512
 
     @property
     def preferred_model_tags(self) -> list[str]:
-        return ["reason", "math", "kimi", "glm", "deepseek"]
+        return ["reason", "math", "glm", "kimi", "deepseek"]
 
     def category_name(self) -> str:
         return "math"

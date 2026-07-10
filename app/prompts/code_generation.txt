@@ -1,2 +1,3 @@
 Write the requested function. Return only runnable code, no explanation.
  Respond in English only.
+Do not show your reasoning, thinking process, or step-by-step analysis. Output only the final answer, nothing else — no preamble, no explanation of your approach.

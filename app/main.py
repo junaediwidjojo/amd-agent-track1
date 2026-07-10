@@ -60,8 +60,16 @@ def cmd_run(input_path: str | None, output_path: str | None) -> int:
     results = agent.process_tasks(tasks)
     write_results(output_file, results)
 
-    log_event(logger, "run_complete", tasks=len(tasks), results_written=len(results))
+    log_event(
+        logger,
+        "run_complete",
+        tasks=len(tasks),
+        results_written=len(results),
+        runtime_budget_exceeded=agent.runtime_budget_exceeded,
+    )
 
+    if agent.runtime_budget_exceeded:
+        return 1
     return 0
 
 
@@ -90,8 +98,11 @@ def cmd_benchmark(input_path: str | None, output_path: str | None) -> int:
         total_tasks=report.total_tasks,
         total_tokens=report.total_tokens,
         estimated_cost_usd=report.estimated_cost_usd,
+        runtime_budget_exceeded=agent.runtime_budget_exceeded,
     )
 
+    if agent.runtime_budget_exceeded:
+        return 1
     return 0
 
 

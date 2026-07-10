@@ -36,6 +36,36 @@ class TestMathSolver:
         assert result is not None
         assert result[0] == "96"
 
+
+    def test_shipped_warehouse(self) -> None:
+        prompt = (
+            "A warehouse starts with 580 boxes. During the morning, 12.5% are shipped out. "
+            "In the afternoon, another 84 boxes are shipped. How many boxes remain?"
+        )
+        result = solve_math(prompt)
+        assert result is not None
+        assert result[0] == "424"
+
+    def test_discount_coupon(self) -> None:
+        prompt = (
+            "The price of a laptop is $1,250. It is discounted by 18%, then an additional "
+            "coupon reduces the discounted price by $75. What is the final price? "
+            "Answer with only the final number, rounded to two decimal places."
+        )
+        result = solve_math(prompt)
+        assert result is not None
+        assert result[0] == "950.00"
+
+    def test_compound_growth(self) -> None:
+        prompt = (
+            "A company had 4,200 users in January and grew 8% month over month. "
+            "How many users will it have after 3 months? "
+            "Answer with only the final number, rounded to the nearest whole number."
+        )
+        result = solve_math(prompt)
+        assert result is not None
+        assert result[0] == "5291"
+
     def test_no_numbers_returns_none(self) -> None:
         result = solve_math("What is the capital of France?")
         assert result is None

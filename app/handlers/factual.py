@@ -6,15 +6,9 @@ import re
 
 from app.fireworks.models import CompletionResult, TaskItem
 from app.handlers.base import BaseHandler
+from app.solvers.factual_solver import solve_factual
 from app.utils.json_utils import clean_answer
-
-
-_IDENTITY_PATTERNS = (
-    r"\bintroduce\s+who\s+you\s+are\b",
-    r"\bwho\s+are\s+you\b",
-    r"\bwhat\s+is\s+your\s+(?:role|purpose|identity)\b",
-    r"\bdescribe\s+yourself\b",
-)
+from app.utils.text_utils import strip_cot
 
 
 class FactualHandler(BaseHandler):
@@ -26,18 +20,38 @@ class FactualHandler(BaseHandler):
 
     @property
     def preferred_model_tags(self) -> list[str]:
-        return ["fast", "small", "kimi", "glm"]
+        return ["fast", "small", "glm", "kimi"]
 
     def category_name(self) -> str:
         return "factual"
 
     def complete(self, task: TaskItem) -> CompletionResult:
-        lower = task.prompt.lower()
-        if any(re.search(p, lower) for p in _IDENTITY_PATTERNS):
-            return CompletionResult(
-                text="I am an AI agent built for the AMD Developer Hackathon Track 1, designed to process tasks using a hybrid local-and-cloud inference architecture."
-            )
+        local = solve_factual(task.prompt)
+        if local and local[1] >= 0.9:
+            return CompletionResult(text=local[0])
         return super().complete(task)
 
     def post_process(self, text: str, task: TaskItem) -> str:
-        return clean_answer(text)
+        cleaned = strip_cot(clean_answer(text, category=self.category_name()))
+        if re.search(r"\bexplain\b", task.prompt, re.IGNORECASE):
+            if re.fullmatch(r"-?\d+(?:\.\d+)?", cleaned.strip()):
+                fallback = solve_factual(task.prompt)
+                if fallback:
+                    return fallback[0]
+            sentences = [
+                s.strip()
+                for s in re.split(r"(?<=[.!?])\s+", cleaned)
+                if s.strip() and len(s.strip()) > 20
+            ]
+            reasoning_prefixes = ("the user", "i need", "let me", "wait", "but wait", "*")
+            good = [
+                s for s in sentences
+                if not s.lower().startswith(reasoning_prefixes)
+                and not re.match(r"^\d+\.", s)
+            ]
+            if good:
+                return " ".join(good[:3])
+            fallback = solve_factual(task.prompt)
+            if fallback:
+                return fallback[0]
+        return cleaned

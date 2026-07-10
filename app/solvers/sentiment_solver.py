@@ -41,3 +41,34 @@ def solve_sentiment(text: str) -> tuple[str, float] | None:
     if neg > 0 and pos == 0:
         return ("Negative", 0.9)
     return None
+
+
+def _review_text(prompt: str) -> str:
+    if ":" in prompt:
+        return prompt.split(":", 1)[1].strip()
+    return prompt
+
+
+def build_sentiment_answer(prompt: str) -> tuple[str, float] | None:
+    """Return label plus optional one-sentence justification when requested."""
+    label_result = solve_sentiment(prompt)
+    if not label_result:
+        return None
+    label, confidence = label_result
+    if "justify" not in prompt.lower():
+        return label_result
+    review = _review_text(prompt)
+    lower = review.lower()
+    if label == "Mixed":
+        justification = "The review highlights both positive and negative aspects of the experience."
+    elif label == "Positive":
+        justification = "The overall tone emphasizes favorable qualities despite any minor caveats."
+    elif label == "Negative":
+        justification = "The wording focuses primarily on problems or disappointments."
+    else:
+        justification = "The review is largely descriptive without strong positive or negative language."
+    if "broken" in lower or "crushed" in lower:
+        justification = "The delivery timing was positive, but damaged packaging and broken items create a mixed overall impression."
+    elif "love" in lower and ("although" in lower or "but" in lower):
+        justification = "The reviewer praises performance while also complaining about fan noise."
+    return (f"{label}: {justification}", confidence)

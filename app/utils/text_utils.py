@@ -22,6 +22,11 @@ def strip_cot(text: str) -> str:
         # Skip markdown headers
         if re.match(r"^#{1,6}\s+", stripped):
             continue
+        # Skip numbered markdown steps like "6.  **"
+        if re.match(r"^\d+\.\s+\*\*?", stripped):
+            continue
+        if re.match(r"^\*\s+", stripped):
+            continue
         # Skip numbered analysis steps like "1. **Analyze:**" or "2.  **Draft:**"
         if re.match(r"^\d+\.\s+\*\*.*\*\*$", stripped):
             continue
@@ -149,10 +154,22 @@ def is_valid_python(code: str) -> bool:
 def extract_final_answer(text: str) -> str:
     """For short-answer tasks, extract the final line or short phrase."""
     cleaned = strip_cot(text)
+    reasoning_prefixes = (
+        "the user wants",
+        "i need to",
+        "let me",
+        "wait,",
+        "but wait",
+        "from the",
+        "puzzle:",
+    )
     lines = [line.strip() for line in cleaned.splitlines() if line.strip()]
     if not lines:
         return cleaned
-    # If last line is very short (likely the answer), return it
-    if len(lines[-1]) < 100:
-        return lines[-1]
+    for line in reversed(lines):
+        lower = line.lower()
+        if any(lower.startswith(prefix) for prefix in reasoning_prefixes):
+            continue
+        if len(line) < 200:
+            return line
     return cleaned

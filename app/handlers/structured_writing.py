@@ -14,18 +14,18 @@ class StructuredWritingHandler(BaseHandler):
 
     @property
     def max_tokens(self) -> int:
-        return 2048
+        return 4096
 
     @property
     def preferred_model_tags(self) -> list[str]:
-        return ["reason", "kimi", "glm", "deepseek"]
+        return ["reason", "glm", "kimi", "deepseek"]
 
     def category_name(self) -> str:
         return "structured_writing"
 
     def post_process(self, text: str, task: TaskItem) -> str:
         # Strip boundary markdown fences only
-        cleaned = clean_answer(text)
+        cleaned = clean_answer(text, category=self.category_name())
 
         # Extract expected section headers from the prompt
         expected_headers = self._extract_expected_headers(task.prompt)

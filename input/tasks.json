@@ -1,82 +1,78 @@
 [
   {
-    "task_id": "challenge-01",
-    "prompt": "Indonesia has several major cities. What is the capital city of Indonesia, and which sea lies immediately to its north? Answer in the format: City; Sea."
+    "task_id": "factual-01",
+    "prompt": "What is the capital city of Indonesia, and which sea lies immediately to its north? Answer in the format: City; Sea."
   },
   {
-    "task_id": "challenge-02",
-    "prompt": "A warehouse starts with 580 boxes. During the morning, 12.5% are shipped out. In the afternoon, another 84 boxes are shipped. How many boxes remain?"
+    "task_id": "factual-02",
+    "prompt": "Explain what a hash table is and why lookups are typically O(1). Answer in 2-3 sentences."
   },
   {
-    "task_id": "challenge-03",
+    "task_id": "math-01",
+    "prompt": "A warehouse starts with 580 boxes. During the morning, 12.5% are shipped out. In the afternoon, another 84 boxes are shipped. How many boxes remain? Answer with only the final number."
+  },
+  {
+    "task_id": "math-02",
+    "prompt": "The price of a laptop is $1,250. It is discounted by 18%, then an additional coupon reduces the discounted price by $75. What is the final price? Answer with only the final number, rounded to two decimal places."
+  },
+  {
+    "task_id": "math-03",
+    "prompt": "A company had 4,200 users in January and grew 8% month over month. How many users will it have after 3 months? Answer with only the final number, rounded to the nearest whole number."
+  },
+  {
+    "task_id": "sentiment-01",
     "prompt": "Classify the sentiment as Positive, Negative, Neutral, or Mixed: I love how fast this laptop is, although the fan becomes annoyingly loud whenever I compile large projects."
   },
   {
-    "task_id": "challenge-04",
+    "task_id": "sentiment-02",
+    "prompt": "Classify the sentiment as Positive, Negative, Neutral, or Mixed, and justify in one sentence: The delivery arrived on time, which was nice, but the packaging was crushed and two items inside were broken."
+  },
+  {
+    "task_id": "summarization-01",
     "prompt": "Summarize the following in exactly one sentence and no more than 25 words: Large language models are increasingly used in software engineering, education, healthcare, and customer support, but careful evaluation is still required to ensure reliability and safety."
   },
   {
-    "task_id": "challenge-05",
-    "prompt": "Extract every named entity and its type as a JSON array: Satya Nadella announced at Microsoft Build 2025 in Seattle that GitHub Copilot would receive several new AI capabilities."
+    "task_id": "summarization-02",
+    "prompt": "Summarize the following in exactly three bullet points, each no more than 12 words: Unit testing catches bugs early, before they reach production. It also documents expected behavior, since tests describe how code should behave under different inputs. Additionally, tests give developers confidence to refactor code without fear of silently breaking existing functionality."
   },
   {
-    "task_id": "challenge-06",
+    "task_id": "ner-01",
+    "prompt": "Extract every named entity and its type as a JSON array with keys 'text' and 'type': Satya Nadella announced at Microsoft Build 2025 in Seattle that GitHub Copilot would receive several new AI capabilities."
+  },
+  {
+    "task_id": "ner-02",
+    "prompt": "Extract every named entity and its type as a JSON array with keys 'text' and 'type': Maria Sanchez joined Fireworks AI in Berlin last March, alongside her colleague David Chen."
+  },
+  {
+    "task_id": "debugging-01",
     "prompt": "The following Python function is intended to calculate the average of a list but contains a bug. Find and fix it:\n\ndef average(nums):\n    return sum(nums) / len\n"
   },
   {
-    "task_id": "challenge-07",
-    "prompt": "Four people—Alice, Bob, Charlie, and Diana—each own exactly one pet: cat, dog, rabbit, or parrot. Alice does not own the cat. Bob owns neither the rabbit nor the dog. Charlie owns the parrot. Who owns the dog?"
+    "task_id": "debugging-02",
+    "prompt": "The following Python function is intended to remove duplicates from a list while preserving order, but it has a bug. Find and fix it:\n\ndef dedupe(items):\n    seen = []\n    result = []\n    for item in items:\n        if item in seen:\n            result.append(item)\n        else:\n            seen.append(item)\n    return result\n"
   },
   {
-    "task_id": "challenge-08",
-    "prompt": "Write a Python function named merge_intervals(intervals) that merges overlapping intervals and returns them sorted by starting value."
+    "task_id": "debugging-03",
+    "prompt": "The following Python function is supposed to return the second-largest unique number in a list, but fails on lists with duplicate maximums. Find and fix it:\n\ndef second_largest(nums):\n    unique = list(set(nums))\n    unique.sort()\n    return unique[-2]\n"
   },
   {
-    "task_id": "challenge-09",
-    "prompt": "Translate the following sentence into natural Indonesian: Although the meeting was delayed by two hours, everyone remained optimistic about the project's future."
+    "task_id": "logic-01",
+    "prompt": "Four people\u2014Alicia, Bob, Charlie, and Diana\u2014each own exactly one pet: cat, dog, rabbit, or parrot. Alicia does not own the cat. Bob owns neither the rabbit nor the dog. Charlie owns the parrot. Who owns the dog? Answer with only the name."
   },
   {
-    "task_id": "challenge-10",
-    "prompt": "The price of a laptop is $1,250. It is discounted by 18%, then an additional coupon reduces the discounted price by $75. What is the final price?"
+    "task_id": "logic-02",
+    "prompt": "Three friends\u2014Sam, Jo, and Lee\u2014finished a race in first, second, and third place, in some order. Sam did not finish first. Jo finished before Lee. Lee did not finish third. What place did each person finish in? Answer in the format: Name-Place, Name-Place, Name-Place."
   },
   {
-    "task_id": "challenge-11",
-    "prompt": "Explain in exactly three bullet points why unit testing is important in software development."
+    "task_id": "codegen-01",
+    "prompt": "Write a Python function named merge_intervals(intervals) that merges overlapping intervals and returns them sorted by starting value. Return only runnable code, no explanation."
   },
   {
-    "task_id": "challenge-12",
-    "prompt": "Write a SQL query that returns the top five customers by total purchase amount from a table named orders(customer_id, amount)."
+    "task_id": "codegen-02",
+    "prompt": "Write a Python function is_palindrome(text) that returns True if text is a palindrome, ignoring punctuation, spaces, and letter casing. Return only runnable code, no explanation."
   },
   {
-    "task_id": "challenge-13",
-    "prompt": "Extract all email addresses from the following text and return only a JSON array: Contact alice@example.com, bob.smith@company.org, or support@fireworks.ai for assistance."
-  },
-  {
-    "task_id": "challenge-14",
-    "prompt": "Sebuah toko memiliki 260 barang. Sebanyak 15% terjual pada hari Senin, kemudian 60 barang lagi terjual pada hari Selasa. Berapa sisa barang?"
-  },
-  {
-    "task_id": "challenge-15",
-    "prompt": "Write a Python function is_palindrome(text) that ignores punctuation, spaces, and letter casing."
-  },
-  {
-    "task_id": "challenge-16",
-    "prompt": "As you are for general usage, please introduce who you are."
-  },
-  {
-    "task_id": "challenge-17",
-    "prompt": "You are given a technical article.\n\nA hybrid AI inference platform routes user requests to either a local 3B quantized language model or a remote frontier model. The router considers task category, estimated complexity, expected output length, confidence score, and historical performance. During evaluation on 10,000 requests, the local model handled sentiment analysis, named entity recognition, summarization, translation, arithmetic, and simple code generation with an average latency of 320 ms. More difficult reasoning, debugging, multi-step planning, and ambiguous instructions were routed to the remote model, averaging 2.8 seconds. Overall, 72% of requests were handled locally while maintaining 96% of the benchmark accuracy, reducing cloud token consumption by more than half.\n\nReturn ONLY a JSON object with these keys: summary, local_tasks, remote_tasks, local_percentage, average_local_latency_ms, average_remote_latency_seconds, cloud_token_reduction. Do not include any explanation."
-  },
-  {
-    "task_id": "challenge-18",
-    "prompt": "Review the following Python code and identify every logical bug, performance issue, and edge case. Then provide a corrected implementation and explain why each change was necessary.\n\n```python\nfrom collections import defaultdict\n\ndef merge_orders(orders):\n    totals = defaultdict(int)\n    for order in orders:\n        totals[order['customer']] = order['amount']\n\n    result = []\n    for customer in totals:\n        result.append({\n            'customer': customer,\n            'amount': totals[customer]\n        })\n\n    return sorted(result, key=lambda x: x['amount'])\n```\n\nYour response must contain four sections titled: Bugs, Performance Improvements, Corrected Code, and Explanation."
-  },
-  {
-    "task_id": "challenge-19",
-    "prompt": "A company is planning to migrate an AI-powered customer support platform from a single hosted LLM to a hybrid inference architecture. The company processes approximately 5 million requests per month. About 65% of requests are FAQ lookup, sentiment classification, entity extraction, translation, and summarization. The remaining requests require complex reasoning, debugging assistance, policy interpretation, and multi-turn planning.\n\nWrite a structured proposal with the following sections:\n1. Executive Summary\n2. Architecture Recommendation\n3. Routing Strategy\n4. Expected Cost Savings\n5. Potential Risks\n6. Monitoring Metrics\n7. Rollback Plan\n\nThe proposal should be concise but technically detailed."
-  },
-  {
-    "task_id": "challenge-20",
-    "prompt": "A software team collected the following benchmark results.\n\nTask Type | Local Accuracy | Remote Accuracy | Local Latency(ms) | Remote Latency(ms)\nSentiment | 99% | 99% | 180 | 2100\nNER | 98% | 99% | 260 | 2200\nTranslation | 96% | 98% | 420 | 2400\nSummarization | 94% | 97% | 520 | 2600\nArithmetic | 100% | 100% | 150 | 1800\nCode Generation | 88% | 97% | 650 | 3100\nMulti-step Reasoning | 61% | 96% | 700 | 3400\n\nBased only on these benchmark results, recommend which tasks should always use the local model, which should always use the remote model, and which should use confidence-based routing. Justify every recommendation with specific reference to both accuracy and latency."
+    "task_id": "codegen-03",
+    "prompt": "Write a Python function second_largest(nums) that returns the second-largest number in a list, correctly handling duplicate values (e.g. [5, 5, 3] should return 3). Return only runnable code, no explanation."
   }
 ]

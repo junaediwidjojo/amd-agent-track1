@@ -27,14 +27,15 @@ class Settings(BaseSettings):
     request_timeout_seconds: float = Field(default=25.0)
     max_retries: int = Field(default=2)
     retry_backoff_base: float = Field(default=0.5)
-    prompt_cache_enabled: bool = Field(default=True)
+    prompt_cache_enabled: bool = Field(default=False)
+    max_runtime_seconds: float = Field(default=600.0, alias="MAX_RUNTIME_SECONDS")
 
     # Local inference settings
     local_model_path: str = Field(default="", alias="LOCAL_MODEL_PATH")
-    local_n_ctx: int = Field(default=4096, alias="LOCAL_N_CTX")
+    local_n_ctx: int = Field(default=2048, alias="LOCAL_N_CTX")
     local_n_threads: int = Field(default=2, alias="LOCAL_N_THREADS")
     local_categories: str = Field(
-        default="sentiment,summarization,ner,factual",
+        default="sentiment,summarization,ner",
         alias="LOCAL_CATEGORIES",
     )
     local_confidence_threshold: float = Field(

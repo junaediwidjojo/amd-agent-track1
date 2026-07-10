@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import re
 
-from app.fireworks.models import TaskItem
+from app.fireworks.models import CompletionResult, TaskItem
+from app.solvers.debug_solver import try_fix_debug_task
 from app.handlers.base import BaseHandler
+from app.utils.json_utils import warn_if_reasoning_leak
 from app.utils.text_utils import extract_first_code_block, is_valid_python, strip_cot
 from app.utils.validators import generate_debug_explanation
 
@@ -19,7 +21,7 @@ class DebuggingHandler(BaseHandler):
 
     @property
     def preferred_model_tags(self) -> list[str]:
-        return ["code", "kimi", "glm", "deepseek"]
+        return ["code", "glm", "kimi", "deepseek"]
 
     def _extract_explanation(self, text: str, code: str) -> str:
         """Extract a concise explanation sentence, stripping CoT noise."""
@@ -40,10 +42,17 @@ class DebuggingHandler(BaseHandler):
             return sentences[0]
         return ""
 
+    def complete(self, task: TaskItem) -> CompletionResult:
+        fixed = try_fix_debug_task(task.prompt)
+        if fixed:
+            return CompletionResult(text=fixed)
+        return super().complete(task)
+
     def category_name(self) -> str:
         return "debugging"
 
     def post_process(self, text: str, task: TaskItem) -> str:
+        warn_if_reasoning_leak(text, self.category_name())
         cleaned = strip_cot(text)
 
         # Detect if the task requires structured sections (e.g., challenge-18)

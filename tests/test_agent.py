@@ -55,3 +55,25 @@ def test_process_task_propagates_other_exceptions(mock_hybrid_provider: MagicMoc
             assert False, "Expected RuntimeError to propagate"
         except RuntimeError:
             pass
+
+
+def test_runtime_budget_skips_remaining_tasks(mock_hybrid_provider: MagicMock) -> None:
+    tasks = [
+        TaskItem(task_id="1", prompt="Question one"),
+        TaskItem(task_id="2", prompt="Question two"),
+    ]
+    mock_completion = CompletionResult(
+        text="answer",
+        metrics=CompletionMetrics(total_tokens=1, model="model-a"),
+    )
+
+    with (
+        patch("app.handlers.base.BaseHandler.complete", return_value=mock_completion),
+        patch.object(Agent, "_runtime_budget_exceeded", side_effect=[False, True]),
+    ):
+        agent = Agent(provider=mock_hybrid_provider, max_runtime_seconds=600.0)
+        results = agent.process_tasks(tasks)
+
+    assert agent.runtime_budget_exceeded is True
+    assert results[0].answer == "answer"
+    assert "runtime limit" in results[1].answer.lower()

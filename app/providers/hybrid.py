@@ -178,6 +178,10 @@ def _factual_confidence(text: str) -> float:
     t = text.strip()
     if not t or len(t) < 2:
         return 0.0
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", t):
+        return 0.0
+    if len(t.split()) < 4:
+        return 0.4
     if len(t) > 1200:
         return 0.5
     return 0.85

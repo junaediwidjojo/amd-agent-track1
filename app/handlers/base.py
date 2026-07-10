@@ -74,7 +74,7 @@ class BaseHandler(ABC):
         return result
 
     def post_process(self, text: str, task: TaskItem) -> str:
-        return clean_answer(text)
+        return clean_answer(text, category=self.category_name())
 
     @abstractmethod
     def category_name(self) -> str:

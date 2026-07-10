@@ -6,6 +6,7 @@ import re
 
 from app.fireworks.models import TaskItem
 from app.handlers.base import BaseHandler
+from app.utils.json_utils import warn_if_reasoning_leak
 from app.utils.text_utils import extract_first_code_block, is_valid_python, strip_cot
 
 
@@ -18,12 +19,13 @@ class CodeGenerationHandler(BaseHandler):
 
     @property
     def preferred_model_tags(self) -> list[str]:
-        return ["code", "kimi", "glm", "deepseek"]
+        return ["code", "glm", "kimi", "deepseek"]
 
     def category_name(self) -> str:
         return "code_generation"
 
     def post_process(self, text: str, task: TaskItem) -> str:
+        warn_if_reasoning_leak(text, self.category_name())
         cleaned = strip_cot(text)
         code = extract_first_code_block(cleaned)
         if not is_valid_python(code):
