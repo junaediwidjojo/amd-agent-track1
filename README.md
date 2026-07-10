@@ -52,7 +52,7 @@ docker-compose.yml     # Local container testing
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt  # includes pytest/ruff for local dev; the Docker image only installs requirements.txt
 ```
 
 ### 2. Configure environment
