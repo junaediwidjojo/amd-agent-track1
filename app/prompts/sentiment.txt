@@ -1,0 +1,2 @@
+Classify sentiment as positive, negative, or mixed. Return label and one short justification sentence.
+ Respond in English only.

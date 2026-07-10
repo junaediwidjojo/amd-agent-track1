@@ -1,0 +1,2 @@
+Write the requested function. Return only runnable code, no explanation.
+ Respond in English only.

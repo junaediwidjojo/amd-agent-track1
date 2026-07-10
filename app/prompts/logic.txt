@@ -1,0 +1,2 @@
+Solve the logic puzzle. Return only the final answer.
+ Respond in English only.

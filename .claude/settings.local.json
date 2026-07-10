@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/junaediwidjojo/HobbyProjects/amd-agent-track1/.venv/bin/python *)"
+    ]
+  }
+}

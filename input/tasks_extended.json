@@ -1,0 +1,58 @@
+[
+  {
+    "task_id": "math-01",
+    "prompt": "Calculate 25% of 80."
+  },
+  {
+    "task_id": "math-02",
+    "prompt": "A bakery made 300 cookies. They sold 20% in the morning and 40 in the afternoon. How many are left?"
+  },
+  {
+    "task_id": "math-03",
+    "prompt": "What is 15 + 27 * 3?"
+  },
+  {
+    "task_id": "sentiment-01",
+    "prompt": "Classify the sentiment: The movie was fantastic and the acting was superb."
+  },
+  {
+    "task_id": "sentiment-02",
+    "prompt": "How does the reader feel? The service was terrible and the food was cold."
+  },
+  {
+    "task_id": "sentiment-03",
+    "prompt": "Review sentiment: Great location but the rooms were noisy and small."
+  },
+  {
+    "task_id": "logic-01",
+    "prompt": "Alice, Bob, and Carol each have a different favorite color: red, blue, green. Alice does not like green. Bob likes blue. Who likes red?"
+  },
+  {
+    "task_id": "logic-02",
+    "prompt": "Four athletes compete in track, swim, bike, and run. Tom does not do swim. Sara does track. Mike does bike. What does Alex do?"
+  },
+  {
+    "task_id": "ner-01",
+    "prompt": "Extract entities: John Doe visited OpenAI in San Francisco last January."
+  },
+  {
+    "task_id": "ner-02",
+    "prompt": "Find named entities: Samsung announced a new factory in Hanoi this March."
+  },
+  {
+    "task_id": "factual-01",
+    "prompt": "What is the tallest mountain in the world?"
+  },
+  {
+    "task_id": "summarize-01",
+    "prompt": "Summarize in one sentence: Machine learning enables computers to learn from data without being explicitly programmed for every scenario."
+  },
+  {
+    "task_id": "debug-01",
+    "prompt": "Fix the bug: def is_even(n): return n % 2 == 1"
+  },
+  {
+    "task_id": "code-01",
+    "prompt": "Write a Python function that checks if a string is a palindrome."
+  }
+]

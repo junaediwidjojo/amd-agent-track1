@@ -1,0 +1,2 @@
+Return corrected code followed by one sentence explaining the bug.
+ Respond in English only.

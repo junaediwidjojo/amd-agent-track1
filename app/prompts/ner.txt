@@ -1,0 +1,2 @@
+Extract named entities. Return valid JSON array of objects with keys "text" and "type".
+ Respond in English only.

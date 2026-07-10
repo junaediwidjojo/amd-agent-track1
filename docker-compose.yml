@@ -1,0 +1,15 @@
+services:
+  agent:
+    build:
+      context: .
+      platforms:
+        - linux/amd64
+    platform: linux/amd64
+    env_file:
+      - .env
+    volumes:
+      - ./input:/input:ro
+      - ./output:/output
+    environment:
+      - INPUT_PATH=/input/tasks.json
+      - OUTPUT_PATH=/output/results.json
