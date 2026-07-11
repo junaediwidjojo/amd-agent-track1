@@ -42,7 +42,7 @@ def test_process_task_catches_api_exhausted(mock_hybrid_provider: MagicMock) -> 
     assert "Unable" in result.answer
 
 
-def test_process_task_propagates_other_exceptions(mock_hybrid_provider: MagicMock) -> None:
+def test_process_task_catches_unexpected_exception(mock_hybrid_provider: MagicMock) -> None:
     task = TaskItem(task_id="err", prompt="What is Python?")
 
     with patch(
@@ -50,11 +50,10 @@ def test_process_task_propagates_other_exceptions(mock_hybrid_provider: MagicMoc
         side_effect=RuntimeError("boom"),
     ):
         agent = Agent(provider=mock_hybrid_provider)
-        try:
-            agent.process_task(task)
-            assert False, "Expected RuntimeError to propagate"
-        except RuntimeError:
-            pass
+        result, _, _ = agent.process_task(task)
+
+    assert result.task_id == "err"
+    assert "Unable" in result.answer
 
 
 def test_runtime_budget_skips_remaining_tasks(mock_hybrid_provider: MagicMock) -> None:

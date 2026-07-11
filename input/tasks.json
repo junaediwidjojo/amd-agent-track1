@@ -61,7 +61,7 @@
   },
   {
     "task_id": "logic-02",
-    "prompt": "Three friends\u2014Sam, Jo, and Lee\u2014finished a race in first, second, and third place, in some order. Sam did not finish first. Jo finished before Lee. Lee did not finish third. What place did each person finish in? Answer in the format: Name-Place, Name-Place, Name-Place."
+    "prompt": "Three friends\u2014Samuel, Jun, and Lee\u2014finished a race in first, second, and third place, in some order. Sam did not finish first. Jun finished before Lee. Lee did not finish third. What place did each person finish in? Answer in the format: Name-Place, Name-Place, Name-Place."
   },
   {
     "task_id": "codegen-01",

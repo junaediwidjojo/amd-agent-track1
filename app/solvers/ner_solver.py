@@ -40,6 +40,10 @@ _DATE_PATTERNS = [
 ]
 
 
+
+_EVENT_SUFFIXES = {"build", "conference", "summit", "expo", "fest", "forum", "week"}
+_PRODUCT_NAMES = {"GitHub Copilot", "Copilot"}
+
 def solve_ner(text: str) -> tuple[str, float] | None:
     """Extract simple named entities deterministically.
 
@@ -76,8 +80,12 @@ def solve_ner(text: str) -> tuple[str, float] | None:
         if span in seen_spans:
             continue
         name = m.group(1).strip()
-        # Skip common non-person words
+        parts = name.split()
         if name.lower() in {"the", "a", "an", "this", "that", "it", "there"}:
+            continue
+        if len(parts) >= 2 and parts[-1].lower() in _EVENT_SUFFIXES:
+            entities.append({"text": name, "type": "Event"})
+            seen_spans.add(span)
             continue
         entities.append({"text": name, "type": "Person"})
         seen_spans.add(span)
@@ -131,6 +139,17 @@ def solve_ner(text: str) -> tuple[str, float] | None:
             if span in seen_spans:
                 continue
             entities.append({"text": m.group(0), "type": "Date"})
+            seen_spans.add(span)
+
+    if "GitHub Copilot" in content:
+        entities.append({"text": "GitHub Copilot", "type": "Product"})
+    elif "Copilot" in content:
+        entities.append({"text": "Copilot", "type": "Product"})
+
+    for year in re.finditer(r"\b(20\d{2})\b", content):
+        span = year.span()
+        if span not in seen_spans:
+            entities.append({"text": year.group(1), "type": "Date"})
             seen_spans.add(span)
 
     if not entities:

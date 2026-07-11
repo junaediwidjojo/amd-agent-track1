@@ -26,6 +26,7 @@ from app.handlers.structured_writing import StructuredWritingHandler
 from app.handlers.summarization import SummarizationHandler
 from app.providers.hybrid import HybridProvider
 from app.router import classify_task
+from app.solvers.fallback import solver_fallback
 from app.utils.logger import get_logger, log_event
 
 logger = get_logger(__name__)
@@ -104,7 +105,20 @@ class Agent:
                 primary_model=exc.primary_model,
                 last_error=str(exc.last_error) if exc.last_error else None,
             )
-            answer = "Unable to process this task."
+            fallback = solver_fallback(task, category)
+            answer = fallback or "Unable to process this task."
+            metrics = CompletionMetrics()
+        except Exception as exc:
+            log_event(
+                logger,
+                "task_error",
+                task_id=task.task_id,
+                category=category.value,
+                error=str(exc),
+                exc_info=True,
+            )
+            fallback = solver_fallback(task, category)
+            answer = fallback or "Unable to process this task."
             metrics = CompletionMetrics()
 
         return ResultItem(task_id=task.task_id, answer=answer), metrics, category

@@ -15,7 +15,7 @@ _POSITIVE_WORDS = {
 
 _NEGATIVE_WORDS = {
     "bad", "terrible", "awful", "hate", "hated", "worst", "poor", "disappointing",
-    "slow", "difficult", "hard", "annoying", "frustrating", "broken", "defective",
+    "slow", "difficult", "hard", "annoying", "annoyingly", "frustrating", "broken", "defective",
     "useless", "cheap", "ugly", "unhappy", "unsatisfied", "regret", "problem",
     "issue", "bug", "crash", "fail", "failure", "error", "scratch", "scratches",
     "fragile", "flimsy", "uncomfortable", "painful", "ridiculous", "nonsense",
@@ -30,7 +30,13 @@ def solve_sentiment(text: str) -> tuple[str, float] | None:
 
     Returns (label, confidence) or None if ambiguous.
     """
-    words = re.findall(r"\b[a-z']+\b", text.lower())
+    review = _review_text(text)
+    lower = review.lower()
+
+    if re.search(r"\b(although|though|however|but)\b", lower):
+        return ("Mixed", 0.95)
+
+    words = re.findall(r"\b[a-z']+\b", lower)
     pos = sum(1 for w in words if w in _POSITIVE_WORDS)
     neg = sum(1 for w in words if w in _NEGATIVE_WORDS)
 

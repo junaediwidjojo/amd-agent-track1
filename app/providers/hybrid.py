@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+from pathlib import Path
 
 from app.config import Settings, get_settings
 from app.fireworks.models import CompletionMetrics, CompletionResult, TaskCategory
@@ -28,9 +29,10 @@ class HybridProvider(BaseLLMProvider):
         self.settings = settings or get_settings()
         self.fireworks = FireworksProvider()
         self.local: LocalProvider | None = None
-        if self.settings.local_model_path:
+        model_path = self.settings.local_model_path.strip()
+        if model_path and Path(model_path).is_file():
             self.local = LocalProvider(
-                model_path=self.settings.local_model_path,
+                model_path=model_path,
                 n_ctx=self.settings.local_n_ctx,
                 n_threads=self.settings.local_n_threads,
             )
@@ -97,6 +99,16 @@ class HybridProvider(BaseLLMProvider):
                     task_id=task_id,
                     category=category.value,
                     timeout_seconds=20,
+                )
+                return self.fireworks.complete(system, user, max_tokens)
+            except Exception as exc:
+                log_event(
+                    logger,
+                    "hybrid_local_failed",
+                    task_id=task_id,
+                    category=category.value,
+                    error=str(exc),
+                    exc_info=True,
                 )
                 return self.fireworks.complete(system, user, max_tokens)
 

@@ -10,9 +10,35 @@ def _source_text(prompt: str) -> str:
     return match.group(1).strip() if match else prompt
 
 
+_FILLER_WORDS = {
+    "a", "an", "the", "it", "in", "on", "at", "to", "of", "for", "by", "with",
+    "from", "into", "through", "during", "after", "over", "between", "out",
+    "also", "additionally", "since", "that", "how", "they", "or", "and", "but",
+    "if", "then", "so", "as", "be", "been", "being", "have", "has", "had",
+    "do", "does", "did", "can", "will", "would", "could", "may", "might",
+    "must", "shall", "very", "really", "just", "still", "even", "when",
+    "where", "which", "than", "too", "each", "few", "some", "such", "only",
+}
+
+
 def _shorten(words: list[str], limit: int = 12) -> str:
-    trimmed = words[:limit]
-    return " ".join(trimmed)
+    while words and words[0].lower() in ("additionally", "also", "furthermore", "moreover", "it"):
+        words = words[1:]
+
+    if len(words) <= limit:
+        return " ".join(words)
+
+    trimmed = [w for w in words if w.lower() not in _FILLER_WORDS]
+    if 4 <= len(trimmed) <= limit:
+        return " ".join(trimmed)
+
+    if len(words) > limit:
+        trimmed = words[:limit]
+        if trimmed[-1].endswith((",", ";", ":")):
+            trimmed[-1] = trimmed[-1].rstrip(",;:")
+        return " ".join(trimmed)
+
+    return " ".join(words)
 
 
 def solve_summarization(prompt: str) -> tuple[str, float] | None:
@@ -27,7 +53,10 @@ def solve_summarization(prompt: str) -> tuple[str, float] | None:
                 words = re.findall(r"[A-Za-z']+", sentence)
                 if not words:
                     continue
-                bullets.append(f"- {_shorten(words, 12)}")
+                line = _shorten(words, 12)
+                if line:
+                    line = line[0].upper() + line[1:]
+                bullets.append(f"- {line}")
             if len(bullets) == 3:
                 return ("\n".join(bullets), 1.0)
 

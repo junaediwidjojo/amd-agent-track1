@@ -136,10 +136,11 @@ def _parse_constraints(text: str, names: list[str], values: list[str]) -> list[d
     return constraints
 
 
-def _solve(names: list[str], values: list[str], constraints: list[dict[str, Any]]) -> dict[str, str] | None:
+def _all_solutions(names: list[str], values: list[str], constraints: list[dict[str, Any]]) -> list[dict[str, str]]:
     """Brute-force solve by trying all permutations."""
     if len(names) != len(values):
         return None
+    solutions: list[dict[str, str]] = []
     for perm in itertools.permutations(values):
         assignment = dict(zip(names, perm))
         ok = True
@@ -157,8 +158,13 @@ def _solve(names: list[str], values: list[str], constraints: list[dict[str, Any]
                     ok = False
                     break
         if ok:
-            return assignment
-    return None
+            solutions.append(assignment)
+    return solutions
+
+
+def _solve(names: list[str], values: list[str], constraints: list[dict[str, Any]]) -> dict[str, str] | None:
+    solutions = _all_solutions(names, values, constraints)
+    return solutions[0] if solutions else None
 
 
 
@@ -235,18 +241,24 @@ def solve_logic(text: str) -> tuple[str, float] | None:
     if not constraints:
         return None
 
-    solution = _solve(names, values, constraints)
-    if not solution:
+    solutions = _all_solutions(names, values, constraints)
+    if not solutions:
         return None
 
-    # Try to answer the explicit question
-    # Pattern 1: "Who owns the cat?"
     question_match = re.search(r"who\s+(?:owns|has|likes|drives|lives)\s+(?:the\s+)?([a-z]+)\?", text, re.IGNORECASE)
     if question_match:
         target_value = question_match.group(1).lower()
-        for name, val in solution.items():
-            if val.lower() == target_value:
-                return (name, 1.0)
+        owners = {
+            name
+            for solution in solutions
+            for name, val in solution.items()
+            if val.lower() == target_value
+        }
+        if len(owners) == 1:
+            return (owners.pop(), 1.0)
+        return None
+
+    solution = solutions[0]
 
     # Pattern 2: "What does [Name] do?" or "Who does [activity]?"
     question_match2 = re.search(r"what\s+does\s+([a-z]+)\s+do\?", text, re.IGNORECASE)

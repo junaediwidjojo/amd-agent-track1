@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     """Runtime settings injected by the hackathon harness or local .env."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env" if __import__("pathlib").Path(".env").is_file() else None),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -79,6 +79,10 @@ class Settings(BaseSettings):
             tag_lower = tag.lower()
             for model in models:
                 if tag_lower in model.lower():
+                    return model
+        for tag in ("minimax", "kimi", "moonshot", "glm"):
+            for model in models:
+                if tag in model.lower():
                     return model
         return self.primary_model
 

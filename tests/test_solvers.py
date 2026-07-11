@@ -154,3 +154,30 @@ class TestNerSolver:
     def test_no_entities_returns_none(self) -> None:
         result = solve_ner("What is the weather today?")
         assert result is None
+
+
+def test_sentiment_contrast_is_mixed() -> None:
+    from app.solvers.sentiment_solver import solve_sentiment
+    result = solve_sentiment(
+        "Classify sentiment: I love how fast this laptop is, although the fan is annoyingly loud."
+    )
+    assert result is not None
+    assert result[0] == "Mixed"
+
+
+def test_summarization_bullets_respect_word_limit() -> None:
+    from app.solvers.summarization_solver import solve_summarization
+
+    prompt = (
+        "Summarize the following in exactly three bullet points, each no more than 12 words: "
+        "Unit testing catches bugs early, before they reach production. "
+        "It also documents expected behavior, since tests describe how code should behave under different inputs. "
+        "Additionally, tests give developers confidence to refactor code without fear of silently breaking existing functionality."
+    )
+    result = solve_summarization(prompt)
+    assert result is not None
+    lines = result[0].splitlines()
+    assert len(lines) == 3
+    for line in lines:
+        assert line.startswith("- ")
+        assert len(line.lstrip("- ").split()) <= 12
