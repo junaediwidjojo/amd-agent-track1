@@ -140,6 +140,28 @@ def extract_last_sentence(text: str) -> str:
     return cleaned
 
 
+def ensure_required_imports(source: str, code: str) -> str:
+    """Prepend import lines from source or infer missing stdlib imports."""
+    imports: list[str] = []
+    for line in source.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("import ", "from ")) and stripped not in imports:
+            imports.append(stripped)
+
+    module_refs = {
+        "re.": "import re",
+        "json.": "import json",
+        "math.": "import math",
+    }
+    for pattern, stmt in module_refs.items():
+        if pattern in code and stmt not in imports and stmt not in code:
+            imports.append(stmt)
+
+    if not imports:
+        return code
+    return "\n".join(imports) + "\n\n" + code
+
+
 def is_valid_python(code: str) -> bool:
     """Check if code is syntactically valid Python using ast.parse."""
     if not code.strip():

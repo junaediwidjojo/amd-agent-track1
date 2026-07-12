@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import time
-
 from app.config import get_settings
 from app.fireworks.client import APIExhaustedError
 from app.fireworks.models import (
@@ -26,7 +24,9 @@ from app.handlers.structured_writing import StructuredWritingHandler
 from app.handlers.summarization import SummarizationHandler
 from app.providers.hybrid import HybridProvider
 from app.router import classify_task
+from app.runtime_manager import RuntimeManager
 from app.solvers.fallback import solver_fallback
+from app.task_executor import TaskExecutor
 from app.utils.logger import get_logger, log_event
 
 logger = get_logger(__name__)
@@ -35,7 +35,7 @@ _RUNTIME_LIMIT_ANSWER = "Unable to process this task within runtime limit."
 
 
 class Agent:
-    """General-purpose task agent with rule-based routing."""
+    """General-purpose task agent with verification-gated execution pipeline."""
 
     def __init__(
         self,
@@ -49,7 +49,6 @@ class Agent:
             if max_runtime_seconds is not None
             else settings.max_runtime_seconds
         )
-        self._run_start: float | None = None
         self.runtime_budget_exceeded = False
         self._handlers: dict[TaskCategory, BaseHandler] = {
             TaskCategory.FACTUAL: FactualHandler(self.provider),
@@ -63,26 +62,25 @@ class Agent:
             TaskCategory.STRUCTURED_EXTRACTION: StructuredExtractionHandler(self.provider),
             TaskCategory.STRUCTURED_WRITING: StructuredWritingHandler(self.provider),
         }
+        self._runtime = RuntimeManager(self._max_runtime_seconds)
+        self._executor = TaskExecutor(self._handlers, self.provider, self._runtime)
 
     def get_handler(self, category: TaskCategory) -> BaseHandler:
         return self._handlers[category]
 
     def _start_run(self) -> None:
-        self._run_start = time.monotonic()
+        self._runtime.start()
         self.runtime_budget_exceeded = False
 
     def _runtime_budget_exceeded(self) -> bool:
-        if self._run_start is None:
-            return False
-        return (time.monotonic() - self._run_start) >= self._max_runtime_seconds
+        return self._runtime.is_budget_exceeded()
 
     def _runtime_limit_result(self, task: TaskItem) -> ResultItem:
         return ResultItem(task_id=task.task_id, answer=_RUNTIME_LIMIT_ANSWER)
 
     def process_task(self, task: TaskItem) -> tuple[ResultItem, CompletionMetrics, TaskCategory]:
-        """Process a single task and return result with metrics."""
+        """Process a single task through the verification pipeline."""
         category = classify_task(task)
-        handler = self.get_handler(category)
 
         log_event(
             logger,
@@ -92,9 +90,22 @@ class Agent:
         )
 
         try:
-            completion = handler.complete(task)
-            answer = completion.text.strip() or "No answer generated."
-            metrics = completion.metrics
+            emergency = self._runtime.is_emergency()
+            execution = self._executor.execute(task, category, emergency=emergency)
+            answer = execution.answer.strip() or "No answer generated."
+            metrics = execution.metrics
+            log_event(
+                logger,
+                "task_complete",
+                task_id=task.task_id,
+                category=category.value,
+                backend=execution.backend,
+                validator_passed=execution.verification.passed,
+                final_confidence=round(execution.verification.confidence, 2),
+                retry_count=execution.retry_count,
+                escalation_reason=execution.escalation_reason,
+                latency_ms=round(execution.latency_ms, 2),
+            )
         except APIExhaustedError as exc:
             log_event(
                 logger,
@@ -127,7 +138,25 @@ class Agent:
         """Process all tasks sequentially, never failing the entire batch."""
         self._start_run()
         results: list[ResultItem] = []
-        for task in tasks:
+        total = len(tasks)
+
+        for idx, task in enumerate(tasks):
+            self._runtime.set_remaining_tasks(total - idx)
+
+            if self._runtime.is_emergency():
+                log_event(
+                    logger,
+                    "runtime_emergency_mode",
+                    task_id=task.task_id,
+                    remaining_seconds=round(self._runtime.remaining_seconds, 1),
+                    tasks_remaining=total - idx,
+                )
+                category = classify_task(task)
+                execution = self._executor.execute(task, category, emergency=True)
+                results.append(ResultItem(task_id=task.task_id, answer=execution.answer))
+                self._runtime.record_task_complete(execution.latency_ms)
+                continue
+
             if self._runtime_budget_exceeded():
                 self.runtime_budget_exceeded = True
                 log_event(
@@ -138,8 +167,12 @@ class Agent:
                 )
                 results.append(self._runtime_limit_result(task))
                 continue
-            result, _, _ = self.process_task(task)
+
+            result, metrics, _ = self.process_task(task)
             results.append(result)
+            self._runtime.record_task_complete(metrics.latency_ms)
+
+        self._log_run_summary()
         return results
 
     def benchmark(self, tasks: list[TaskItem]) -> BenchmarkReport:
@@ -147,8 +180,20 @@ class Agent:
         self._start_run()
         results: list[ResultItem] = []
         per_task_metrics: dict[str, CompletionMetrics] = {}
+        total = len(tasks)
 
-        for task in tasks:
+        for idx, task in enumerate(tasks):
+            self._runtime.set_remaining_tasks(total - idx)
+
+            if self._runtime.is_emergency():
+                category = classify_task(task)
+                execution = self._executor.execute(task, category, emergency=True)
+                result = ResultItem(task_id=task.task_id, answer=execution.answer)
+                results.append(result)
+                per_task_metrics[task.task_id] = execution.metrics
+                self._runtime.record_task_complete(execution.metrics.latency_ms)
+                continue
+
             if self._runtime_budget_exceeded():
                 self.runtime_budget_exceeded = True
                 log_event(
@@ -163,9 +208,11 @@ class Agent:
                 results.append(result)
                 per_task_metrics[task.task_id] = metrics
                 continue
+
             result, metrics, category = self.process_task(task)
             results.append(result)
             per_task_metrics[task.task_id] = metrics
+            self._runtime.record_task_complete(metrics.latency_ms)
             log_event(
                 logger,
                 "benchmark_task",
@@ -177,6 +224,8 @@ class Agent:
                 model=metrics.model,
                 confidence=round(metrics.confidence, 2) if metrics.confidence is not None else None,
             )
+
+        self._log_run_summary()
 
         total_tokens = sum(m.total_tokens for m in per_task_metrics.values())
         total_latency_ms = sum(m.latency_ms for m in per_task_metrics.values())
@@ -190,4 +239,20 @@ class Agent:
             estimated_cost_usd=estimated_cost_usd,
             results=results,
             per_task_metrics=per_task_metrics,
+        )
+
+    def _log_run_summary(self) -> None:
+        stats = self._runtime.stats
+        log_event(
+            logger,
+            "run_summary",
+            deterministic_count=stats.deterministic_count,
+            local_count=stats.local_count,
+            fireworks_count=stats.fireworks_count,
+            fireworks_strong_count=stats.fireworks_strong_count,
+            retries=stats.retries,
+            validation_failures=stats.validation_failures,
+            escalations=stats.escalations,
+            runtime_remaining_s=round(self._runtime.remaining_seconds, 1),
+            runtime_elapsed_s=round(self._runtime.elapsed_seconds, 1),
         )

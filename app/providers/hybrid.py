@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import ast
-import json
-import re
 from pathlib import Path
 
 from app.config import Settings, get_settings
-from app.fireworks.models import CompletionMetrics, CompletionResult, TaskCategory
+from app.fireworks.models import CompletionMetrics, CompletionResult, TaskCategory, TaskItem
 from app.providers.base import BaseLLMProvider
 from app.providers.fireworks import FireworksProvider
 from app.providers.local import LocalProvider
 from app.utils.logger import get_logger, log_event
+from app.verification import verify_answer
 
 logger = get_logger(__name__)
 
@@ -20,9 +18,8 @@ logger = get_logger(__name__)
 class HybridProvider(BaseLLMProvider):
     """Routes tasks between local CPU inference and Fireworks API.
 
-    Categories configured in ``local_categories`` are attempted locally first.
-    If the local response fails validation (confidence < threshold),
-    the provider silently falls back to Fireworks.
+    Accepts local responses only when verification passes AND confidence meets
+    threshold AND output format is valid. Otherwise escalates to Fireworks.
     """
 
     def __init__(self, settings: Settings | None = None) -> None:
@@ -38,10 +35,6 @@ class HybridProvider(BaseLLMProvider):
                     n_threads=self.settings.local_n_threads,
                 )
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
-
     def complete(
         self,
         system: str,
@@ -51,24 +44,92 @@ class HybridProvider(BaseLLMProvider):
         category: str | None = None,
         task_id: str = "",
     ) -> CompletionResult:
+        """Legacy entry point — local-first with verification-gated fallback."""
         cat_enum = self._parse_category(category)
-        if cat_enum and cat_enum.value in self.settings.local_category_set:
-            if self.local is not None:
-                return self._try_local_then_fireworks(
-                    system, user, max_tokens, cat_enum, task_id
-                )
-            log_event(
-                logger,
-                "hybrid_local_disabled",
-                task_id=task_id,
-                category=cat_enum.value,
-                reason="local_model_path not set",
+        if cat_enum and cat_enum.value in self.settings.local_category_set and self.local is not None:
+            task = TaskItem(task_id=task_id or "legacy", prompt=user)
+            return self._try_local_then_fireworks(
+                system, user, max_tokens, cat_enum, task_id, task,
             )
         return self.fireworks.complete(system, user, max_tokens, model)
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
+    def complete_local(
+        self,
+        system: str,
+        user: str,
+        max_tokens: int,
+        category: str,
+        task_id: str,
+        task: TaskItem,
+    ) -> CompletionResult:
+        """Run local inference with timeout handling."""
+        cat_enum = self._parse_category(category)
+        if self.local is None or cat_enum is None:
+            return self.complete_fireworks(
+                system, user, max_tokens,
+                model=self.settings.pick_model(["fast", "small"]),
+                category=cat_enum or TaskCategory.FACTUAL,
+                task_id=task_id,
+                task=task,
+            )
+        return self._run_local(system, user, max_tokens, cat_enum, task_id, task)
+
+    def complete_fireworks(
+        self,
+        system: str,
+        user: str,
+        max_tokens: int,
+        model: str,
+        category: TaskCategory,
+        task_id: str,
+        task: TaskItem,
+    ) -> CompletionResult:
+        """Run Fireworks with verification-based escalation."""
+        result = self.fireworks.complete(system, user, max_tokens, model=model)
+        verification = verify_answer(result.text, task, category)
+        result.metrics.confidence = verification.confidence
+        result.metrics.backend = "fireworks"
+        result.metrics.model = model
+
+        if verification.passed and verification.confidence >= self.settings.local_confidence_threshold:
+            return result
+
+        escalation = self.pick_escalation_model(category)
+        if escalation and escalation != model and verification.backend_recommendation == "fireworks_strong":
+            log_event(
+                logger,
+                "hybrid_fireworks_escalation",
+                task_id=task_id,
+                category=category.value,
+                primary_model=model,
+                escalation_model=escalation,
+                confidence=round(verification.confidence, 2),
+                retry_reason=verification.retry_reason,
+            )
+            strong = self.fireworks.complete(system, user, max_tokens, model=escalation)
+            strong_ver = verify_answer(strong.text, task, category)
+            strong.metrics.confidence = strong_ver.confidence
+            strong.metrics.backend = "fireworks_strong"
+            strong.metrics.model = escalation
+            if strong_ver.confidence >= verification.confidence:
+                return strong
+        return result
+
+    def pick_escalation_model(self, category: TaskCategory) -> str | None:
+        models = self.settings.model_list
+        if len(models) < 2:
+            return None
+        if category in (
+            TaskCategory.CODE_GENERATION,
+            TaskCategory.DEBUGGING,
+            TaskCategory.MATH,
+            TaskCategory.LOGIC,
+        ):
+            for tag in ("kimi", "minimax", "moonshot", "reason", "code"):
+                for model in models:
+                    if tag in model.lower():
+                        return model
+        return models[-1]
 
     def _parse_category(self, category: str | None) -> TaskCategory | None:
         if category is None:
@@ -85,10 +146,85 @@ class HybridProvider(BaseLLMProvider):
         max_tokens: int,
         category: TaskCategory,
         task_id: str,
+        task: TaskItem,
     ) -> CompletionResult:
-        assert self.local is not None
+        if self.local is None:
+            return self.complete_fireworks(
+                system, user, max_tokens,
+                model=self.settings.pick_model(self._primary_tags(category)),
+                category=category,
+                task_id=task_id,
+                task=task,
+            )
+
+        try:
+            local_result = self._run_local(system, user, max_tokens, category, task_id, task)
+        except Exception as exc:
+            log_event(
+                logger,
+                "hybrid_local_failed",
+                task_id=task_id,
+                category=category.value,
+                error=str(exc),
+                exc_info=True,
+            )
+            return self.complete_fireworks(
+                system, user, max_tokens,
+                model=self.settings.pick_model(self._primary_tags(category)),
+                category=category,
+                task_id=task_id,
+                task=task,
+            )
+
+        verification = verify_answer(local_result.text, task, category)
+        local_result.metrics.confidence = verification.confidence
+
+        log_event(
+            logger,
+            "hybrid_local_result",
+            task_id=task_id,
+            category=category.value,
+            confidence=round(verification.confidence, 2),
+            validator_passed=verification.passed,
+            model=local_result.metrics.model,
+            latency_ms=round(local_result.metrics.latency_ms, 2),
+        )
+
+        if (
+            verification.passed
+            and verification.confidence >= self.settings.local_confidence_threshold
+        ):
+            return local_result
+
+        log_event(
+            logger,
+            "hybrid_fallback_to_fireworks",
+            task_id=task_id,
+            category=category.value,
+            confidence=round(verification.confidence, 2),
+            threshold=self.settings.local_confidence_threshold,
+            retry_reason=verification.retry_reason,
+        )
+        return self.complete_fireworks(
+            system, user, max_tokens,
+            model=self.settings.pick_model(self._primary_tags(category)),
+            category=category,
+            task_id=task_id,
+            task=task,
+        )
+
+    def _run_local(
+        self,
+        system: str,
+        user: str,
+        max_tokens: int,
+        category: TaskCategory,
+        task_id: str,
+        task: TaskItem,
+    ) -> CompletionResult:
         from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 
+        assert self.local is not None
         timeout = self.settings.local_call_timeout_seconds
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(self.local.complete, system, user, max_tokens)
@@ -102,79 +238,11 @@ class HybridProvider(BaseLLMProvider):
                     category=category.value,
                     timeout_seconds=timeout,
                 )
-                return self._fireworks_with_escalation(
-                    system, user, max_tokens, category, task_id
-                )
-            except Exception as exc:
-                log_event(
-                    logger,
-                    "hybrid_local_failed",
-                    task_id=task_id,
-                    category=category.value,
-                    error=str(exc),
-                    exc_info=True,
-                )
-                return self._fireworks_with_escalation(
-                    system, user, max_tokens, category, task_id
-                )
-
-        confidence = self._compute_confidence(local_result.text, category)
-        local_result.metrics.confidence = confidence
-
-        log_event(
-            logger,
-            "hybrid_local_result",
-            task_id=task_id,
-            category=category.value,
-            confidence=round(confidence, 2),
-            model=local_result.metrics.model,
-            latency_ms=round(local_result.metrics.latency_ms, 2),
-        )
-
-        if confidence >= self.settings.local_confidence_threshold:
-            return local_result
-
-        log_event(
-            logger,
-            "hybrid_fallback_to_fireworks",
-            task_id=task_id,
-            category=category.value,
-            confidence=round(confidence, 2),
-            threshold=self.settings.local_confidence_threshold,
-        )
-        return self._fireworks_with_escalation(
-            system, user, max_tokens, category, task_id
-        )
-
-    def _fireworks_with_escalation(
-        self,
-        system: str,
-        user: str,
-        max_tokens: int,
-        category: TaskCategory,
-        task_id: str,
-    ) -> CompletionResult:
-        """Try primary Fireworks model, then escalation tier for hard categories."""
-        primary = self.settings.pick_model(self._primary_tags(category))
-        result = self.fireworks.complete(system, user, max_tokens, model=primary)
-        confidence = self._compute_confidence(result.text, category)
-        result.metrics.confidence = confidence
-        if confidence >= self.settings.local_confidence_threshold:
-            return result
-
-        escalation = self._escalation_model(category)
-        if escalation and escalation != primary:
-            log_event(
-                logger,
-                "hybrid_fireworks_escalation",
-                task_id=task_id,
-                category=category.value,
-                primary_model=primary,
-                escalation_model=escalation,
-                confidence=round(confidence, 2),
-            )
-            return self.fireworks.complete(system, user, max_tokens, model=escalation)
-        return result
+                raise
+        local_result.metrics.backend = "local"
+        verification = verify_answer(local_result.text, task, category)
+        local_result.metrics.confidence = verification.confidence
+        return local_result
 
     def _primary_tags(self, category: TaskCategory) -> list[str]:
         if category in (TaskCategory.CODE_GENERATION, TaskCategory.DEBUGGING):
@@ -182,119 +250,3 @@ class HybridProvider(BaseLLMProvider):
         if category in (TaskCategory.MATH, TaskCategory.LOGIC):
             return ["reason", "math", "kimi", "glm"]
         return ["fast", "small", "glm", "kimi", "minimax"]
-
-    def _escalation_model(self, category: TaskCategory) -> str | None:
-        models = self.settings.model_list
-        if len(models) < 2:
-            return None
-        if category in (TaskCategory.CODE_GENERATION, TaskCategory.DEBUGGING, TaskCategory.MATH, TaskCategory.LOGIC):
-            for tag in ("kimi", "minimax", "moonshot", "reason", "code"):
-                for model in models:
-                    if tag in model.lower():
-                        return model
-        return models[-1]
-
-    # ------------------------------------------------------------------
-    # Confidence validators (lightweight, CPU-only)
-    # ------------------------------------------------------------------
-
-    def _compute_confidence(self, text: str, category: TaskCategory) -> float:
-        validator = _VALIDATORS.get(category)
-        if validator is None:
-            return 0.0
-        return validator(text)
-
-
-# ------------------------------------------------------------------
-# Category-specific validators
-# ------------------------------------------------------------------
-
-def _sentiment_confidence(text: str) -> float:
-    lower = text.lower().strip()
-    labels = ("positive", "negative", "neutral", "mixed")
-    if lower in labels:
-        return 1.0
-    if any(l in lower for l in labels):
-        return 0.7
-    return 0.0
-
-
-def _summary_confidence(text: str) -> float:
-    t = text.strip()
-    if not t:
-        return 0.0
-    if len(t) < 10:
-        return 0.4
-    if len(t) > 800:
-        return 0.5
-    return 0.85
-
-
-def _ner_confidence(text: str) -> float:
-    t = text.strip()
-    try:
-        json.loads(t)
-        return 0.9
-    except json.JSONDecodeError:
-        pass
-    if re.search(r"\[.*\]", t, re.DOTALL):
-        return 0.4
-    return 0.0
-
-
-def _factual_confidence(text: str) -> float:
-    t = text.strip()
-    if not t or len(t) < 2:
-        return 0.0
-    if re.fullmatch(r"-?\d+(?:\.\d+)?", t):
-        return 0.0
-    if len(t.split()) < 4:
-        return 0.4
-    if len(t) > 1200:
-        return 0.5
-    return 0.85
-
-
-def _math_confidence(text: str) -> float:
-    t = text.strip()
-    numbers = re.findall(r"-?\d+(?:\.\d+)?", t)
-    if numbers and len(t.split()) <= 5:
-        return 0.9
-    return 0.0
-
-
-def _logic_confidence(text: str) -> float:
-    t = text.strip()
-    if not t or len(t) < 2:
-        return 0.0
-    if len(t) > 200:
-        return 0.5
-    return 0.8
-
-
-def _code_confidence(text: str) -> float:
-    t = text.strip()
-    try:
-        ast.parse(t)
-        return 0.9
-    except SyntaxError:
-        return 0.0
-
-
-def _debug_confidence(text: str) -> float:
-    lines = text.strip().split("\n")
-    if len(lines) >= 2 and any("def " in line for line in lines[:3]):
-        return 0.8
-    return 0.0
-
-
-_VALIDATORS: dict[TaskCategory, object] = {
-    TaskCategory.SENTIMENT: _sentiment_confidence,
-    TaskCategory.SUMMARIZATION: _summary_confidence,
-    TaskCategory.NER: _ner_confidence,
-    TaskCategory.FACTUAL: _factual_confidence,
-    TaskCategory.MATH: _math_confidence,
-    TaskCategory.LOGIC: _logic_confidence,
-    TaskCategory.CODE_GENERATION: _code_confidence,
-    TaskCategory.DEBUGGING: _debug_confidence,
-}

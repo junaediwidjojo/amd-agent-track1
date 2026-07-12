@@ -8,7 +8,7 @@ from app.fireworks.models import CompletionResult, TaskItem
 from app.handlers.base import BaseHandler
 from app.solvers.codegen_solver import solve_codegen
 from app.utils.json_utils import warn_if_reasoning_leak
-from app.utils.text_utils import extract_first_code_block, is_valid_python, strip_cot
+from app.utils.text_utils import ensure_required_imports, extract_first_code_block, is_valid_python, strip_cot
 
 
 class CodeGenerationHandler(BaseHandler):
@@ -73,4 +73,6 @@ class CodeGenerationHandler(BaseHandler):
                 candidate = "\n".join(code_lines).strip()
                 if candidate and is_valid_python(candidate):
                     code = candidate
+        if code:
+            code = ensure_required_imports(cleaned, code)
         return code if code else cleaned
