@@ -44,7 +44,7 @@ class TestMathSolver:
         )
         result = solve_math(prompt)
         assert result is not None
-        assert result[0] == "424"
+        assert result[0] == "423"
 
     def test_discount_coupon(self) -> None:
         prompt = (

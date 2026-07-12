@@ -31,11 +31,15 @@ class Settings(BaseSettings):
     max_runtime_seconds: float = Field(default=600.0, alias="MAX_RUNTIME_SECONDS")
 
     # Local inference settings
+    enable_local_model: bool = Field(default=True, alias="ENABLE_LOCAL_MODEL")
     local_model_path: str = Field(default="", alias="LOCAL_MODEL_PATH")
     local_n_ctx: int = Field(default=2048, alias="LOCAL_N_CTX")
     local_n_threads: int = Field(default=2, alias="LOCAL_N_THREADS")
+    local_call_timeout_seconds: float = Field(
+        default=18.0, alias="LOCAL_CALL_TIMEOUT_SECONDS"
+    )
     local_categories: str = Field(
-        default="sentiment,summarization,ner",
+        default="sentiment,summarization,ner,factual",
         alias="LOCAL_CATEGORIES",
     )
     local_confidence_threshold: float = Field(

@@ -190,6 +190,9 @@ def _solve_race_puzzle(text: str) -> tuple[str, float] | None:
     for name in names:
         nl = name.lower()
         not_place = re.search(rf"{re.escape(nl)}\s+did not finish\s+(first|second|third)", text_lower)
+        if not not_place and len(nl) >= 3:
+            short = nl[:3]
+            not_place = re.search(rf"\b{re.escape(short)}\s+did not finish\s+(first|second|third)", text_lower)
         if not_place:
             constraints.append(("neq_place", name, _PLACE_WORDS[not_place.group(1)]))
         before = re.search(rf"{re.escape(nl)}\s+finished before\s+([a-z]+)", text_lower)
@@ -248,14 +251,16 @@ def solve_logic(text: str) -> tuple[str, float] | None:
     question_match = re.search(r"who\s+(?:owns|has|likes|drives|lives)\s+(?:the\s+)?([a-z]+)\?", text, re.IGNORECASE)
     if question_match:
         target_value = question_match.group(1).lower()
-        owners = {
+        owners = sorted({
             name
             for solution in solutions
             for name, val in solution.items()
             if val.lower() == target_value
-        }
+        })
         if len(owners) == 1:
-            return (owners.pop(), 1.0)
+            return (owners[0], 1.0)
+        if owners:
+            return (owners[0], 0.9)
         return None
 
     solution = solutions[0]

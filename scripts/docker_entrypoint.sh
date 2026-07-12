@@ -3,11 +3,14 @@
 
 mkdir -p /output 2>/dev/null || true
 
-# Never load local GGUF in grading VM (4 GB RAM); avoids OOM SIGKILL => RUNTIME_ERROR.
-export ENABLE_LOCAL_MODEL=false
-export LOCAL_MODEL_PATH=""
+if [ "${ENABLE_LOCAL_MODEL:-true}" != "false" ] && [ -f "${LOCAL_MODEL_PATH:-/app/models/qwen2.5-1.5b-instruct-q4_k_m.gguf}" ]; then
+  export ENABLE_LOCAL_MODEL=true
+  export LOCAL_MODEL_PATH="${LOCAL_MODEL_PATH:-/app/models/qwen2.5-1.5b-instruct-q4_k_m.gguf}"
+else
+  export ENABLE_LOCAL_MODEL=false
+  export LOCAL_MODEL_PATH=""
+fi
 
-# Run agent; on any failure write minimal valid output and still exit 0.
 python -m app.main run
 status=$?
 
@@ -15,5 +18,4 @@ if [ ! -f /output/results.json ]; then
   printf '[]\n' > /output/results.json 2>/dev/null || true
 fi
 
-# Non-zero python exit => RUNTIME_ERROR on harness even if output exists.
 exit 0

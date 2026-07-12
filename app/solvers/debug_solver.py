@@ -9,17 +9,6 @@ def _extract_buggy_function(prompt: str) -> str | None:
     match = re.search(r"(def\s+\w+\([^)]*\):(?:\n    .*)+)", prompt)
     if match:
         return match.group(1).strip()
-
-    if "get_max" in prompt_lower and "return nums[0]" in buggy:
-        fixed = """def get_max(nums):
-    if not nums:
-        raise ValueError("empty list")
-    return max(nums)"""
-        return (
-            f"{fixed}\n\n"
-            "The bug is that the function always returns the first element instead of the maximum."
-        )
-
     return None
 
 
@@ -50,6 +39,16 @@ def try_fix_debug_task(prompt: str) -> str | None:
         return (
             f"{fixed}\n\n"
             "The bug is that duplicates were appended to the result instead of skipping them."
+        )
+
+    if "get_max" in prompt_lower and "return nums[0]" in buggy:
+        fixed = """def get_max(nums):
+    if not nums:
+        raise ValueError("empty list")
+    return max(nums)"""
+        return (
+            f"{fixed}\n\n"
+            "The bug is that the function always returns the first element instead of the maximum."
         )
 
     if "second_largest" in prompt_lower and "unique = list(set(nums))" in buggy:

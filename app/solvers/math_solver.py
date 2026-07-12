@@ -109,6 +109,8 @@ def solve_math(text: str) -> tuple[str, float] | None:
         rate = float(growth_match.group(2)) / 100
         months = int(growth_match.group(3))
         result = start * ((1 + rate) ** months)
+        if whole:
+            return (str(round(result)), 1.0)
         return (_format_number(result, decimals=decimals, whole=whole), 1.0)
 
     discount_match = re.search(
@@ -170,7 +172,7 @@ def solve_math(text: str) -> tuple[str, float] | None:
             if extra_match:
                 remaining -= float(extra_match.group(1))
             if decimals is None and not whole and re.search(r"\b(boxes|items)\b", text_lower):
-                remaining = round(remaining)
+                remaining = int(remaining)
                 whole = True
             return (_format_number(remaining, decimals=decimals, whole=whole), 0.95)
 

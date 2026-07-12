@@ -22,7 +22,7 @@ fi
 mkdir -p "$OUTPUT_DIR"
 rm -f "$OUTPUT_DIR/results.json"
 
-echo "==> Building linux/amd64 image (slim, no local GGUF)..."
+echo "==> Building linux/amd64 image (hybrid local + Fireworks)..."
 docker buildx build \
   --platform linux/amd64 \
   -f Dockerfile \
@@ -46,8 +46,6 @@ docker run --rm \
   -e "FIREWORKS_API_KEY=${FIREWORKS_API_KEY}" \
   -e "FIREWORKS_BASE_URL=${FIREWORKS_BASE_URL}" \
   -e "ALLOWED_MODELS=${ALLOWED_MODELS}" \
-  -e "ENABLE_LOCAL_MODEL=false" \
-  -e "LOCAL_MODEL_PATH=" \
   "$IMAGE"
 
 EXIT_CODE=$?

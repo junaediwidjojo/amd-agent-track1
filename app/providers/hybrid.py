@@ -29,13 +29,14 @@ class HybridProvider(BaseLLMProvider):
         self.settings = settings or get_settings()
         self.fireworks = FireworksProvider()
         self.local: LocalProvider | None = None
-        model_path = self.settings.local_model_path.strip()
-        if model_path and Path(model_path).is_file():
-            self.local = LocalProvider(
-                model_path=model_path,
-                n_ctx=self.settings.local_n_ctx,
-                n_threads=self.settings.local_n_threads,
-            )
+        if self.settings.enable_local_model:
+            model_path = self.settings.local_model_path.strip()
+            if model_path and Path(model_path).is_file():
+                self.local = LocalProvider(
+                    model_path=model_path,
+                    n_ctx=self.settings.local_n_ctx,
+                    n_threads=self.settings.local_n_threads,
+                )
 
     # ------------------------------------------------------------------
     # Public API
@@ -88,19 +89,22 @@ class HybridProvider(BaseLLMProvider):
         assert self.local is not None
         from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
 
+        timeout = self.settings.local_call_timeout_seconds
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(self.local.complete, system, user, max_tokens)
             try:
-                local_result = future.result(timeout=20)
+                local_result = future.result(timeout=timeout)
             except FutureTimeoutError:
                 log_event(
                     logger,
                     "hybrid_local_timeout",
                     task_id=task_id,
                     category=category.value,
-                    timeout_seconds=20,
+                    timeout_seconds=timeout,
                 )
-                return self.fireworks.complete(system, user, max_tokens)
+                return self._fireworks_with_escalation(
+                    system, user, max_tokens, category, task_id
+                )
             except Exception as exc:
                 log_event(
                     logger,
@@ -110,7 +114,9 @@ class HybridProvider(BaseLLMProvider):
                     error=str(exc),
                     exc_info=True,
                 )
-                return self.fireworks.complete(system, user, max_tokens)
+                return self._fireworks_with_escalation(
+                    system, user, max_tokens, category, task_id
+                )
 
         confidence = self._compute_confidence(local_result.text, category)
         local_result.metrics.confidence = confidence
@@ -136,7 +142,57 @@ class HybridProvider(BaseLLMProvider):
             confidence=round(confidence, 2),
             threshold=self.settings.local_confidence_threshold,
         )
-        return self.fireworks.complete(system, user, max_tokens)
+        return self._fireworks_with_escalation(
+            system, user, max_tokens, category, task_id
+        )
+
+    def _fireworks_with_escalation(
+        self,
+        system: str,
+        user: str,
+        max_tokens: int,
+        category: TaskCategory,
+        task_id: str,
+    ) -> CompletionResult:
+        """Try primary Fireworks model, then escalation tier for hard categories."""
+        primary = self.settings.pick_model(self._primary_tags(category))
+        result = self.fireworks.complete(system, user, max_tokens, model=primary)
+        confidence = self._compute_confidence(result.text, category)
+        result.metrics.confidence = confidence
+        if confidence >= self.settings.local_confidence_threshold:
+            return result
+
+        escalation = self._escalation_model(category)
+        if escalation and escalation != primary:
+            log_event(
+                logger,
+                "hybrid_fireworks_escalation",
+                task_id=task_id,
+                category=category.value,
+                primary_model=primary,
+                escalation_model=escalation,
+                confidence=round(confidence, 2),
+            )
+            return self.fireworks.complete(system, user, max_tokens, model=escalation)
+        return result
+
+    def _primary_tags(self, category: TaskCategory) -> list[str]:
+        if category in (TaskCategory.CODE_GENERATION, TaskCategory.DEBUGGING):
+            return ["code", "glm", "kimi", "minimax"]
+        if category in (TaskCategory.MATH, TaskCategory.LOGIC):
+            return ["reason", "math", "kimi", "glm"]
+        return ["fast", "small", "glm", "kimi", "minimax"]
+
+    def _escalation_model(self, category: TaskCategory) -> str | None:
+        models = self.settings.model_list
+        if len(models) < 2:
+            return None
+        if category in (TaskCategory.CODE_GENERATION, TaskCategory.DEBUGGING, TaskCategory.MATH, TaskCategory.LOGIC):
+            for tag in ("kimi", "minimax", "moonshot", "reason", "code"):
+                for model in models:
+                    if tag in model.lower():
+                        return model
+        return models[-1]
 
     # ------------------------------------------------------------------
     # Confidence validators (lightweight, CPU-only)
