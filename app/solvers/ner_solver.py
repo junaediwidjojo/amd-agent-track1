@@ -43,7 +43,8 @@ _DATE_PATTERNS = [
 
 
 _EVENT_SUFFIXES = {"build", "conference", "summit", "expo", "fest", "forum", "week"}
-_PRODUCT_NAMES = {"GitHub Copilot", "Copilot"}
+_VENUE_SUFFIXES = {"park", "campus", "headquarters", "hq", "center", "centre", "stadium", "arena"}
+_PRODUCT_PATTERN = re.compile(r"\b(?:iPhone|iPad|MacBook|Pixel|Galaxy|Surface)\s*\d*\b", re.I)
 
 def solve_ner(text: str) -> tuple[str, float] | None:
     """Extract simple named entities deterministically.
@@ -86,6 +87,10 @@ def solve_ner(text: str) -> tuple[str, float] | None:
             continue
         if len(parts) >= 2 and parts[-1].lower() in _EVENT_SUFFIXES:
             entities.append({"text": name, "type": "Event"})
+            seen_spans.add(span)
+            continue
+        if len(parts) >= 2 and parts[-1].lower() in _VENUE_SUFFIXES:
+            entities.append({"text": name, "type": "Location"})
             seen_spans.add(span)
             continue
         entities.append({"text": name, "type": "Person"})
@@ -141,6 +146,13 @@ def solve_ner(text: str) -> tuple[str, float] | None:
                 continue
             entities.append({"text": m.group(0), "type": "Date"})
             seen_spans.add(span)
+
+    for product in _PRODUCT_PATTERN.finditer(content):
+        span = product.span()
+        if span in seen_spans:
+            continue
+        entities.append({"text": product.group(0), "type": "Product"})
+        seen_spans.add(span)
 
     if "GitHub Copilot" in content:
         entities.append({"text": "GitHub Copilot", "type": "Product"})

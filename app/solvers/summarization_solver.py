@@ -60,9 +60,18 @@ def solve_summarization(prompt: str) -> tuple[str, float] | None:
             if len(bullets) == 3:
                 return ("\n".join(bullets), 1.0)
 
-    if "one sentence" in lower:
+    wants_sentence = bool(
+        re.search(
+            r"\b(?:one|a|single)\s+sentence\b|\bcondense\b.*\b(?:sentence|words?)\b",
+            lower,
+        )
+    )
+    if wants_sentence:
         words = re.findall(r"[A-Za-z']+", source)
-        limit_match = re.search(r"(?:no more than|at most|max(?:imum)?)\s+(\d+)\s+words", lower)
+        limit_match = re.search(
+            r"(?:no more than|at most|max(?:imum)?|of)\s+(\d+)\s+words",
+            lower,
+        )
         limit = int(limit_match.group(1)) if limit_match else 30
         if words:
             return (_shorten(words, limit), 0.95)

@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 
 from app.fireworks.models import TaskCategory, TaskItem
+from app.solvers.logic_solver import solve_logic
 from app.solvers.math_solver import solve_math
 from app.utils.json_utils import validate_json_string
 from app.utils.validators import is_truncated_summary
@@ -213,6 +214,15 @@ def _verify_logic(answer: str, task: TaskItem) -> VerificationResult:
         return _fail("generic_failure", backend="fireworks")
     if re.match(r"(?i)^(wait|but|let me|from the|puzzle|the user)", text):
         return _fail("reasoning_leak", confidence=0.1, backend="fireworks")
+
+    solver = solve_logic(task.prompt)
+    if solver:
+        expected = solver[0].strip().lower()
+        actual = text.lower().replace(" ", "")
+        expected_compact = expected.replace(" ", "")
+        if actual == expected or expected_compact in actual or actual in expected_compact:
+            return _pass(0.95)
+        return _fail("solver_mismatch", confidence=0.35, backend="fireworks_strong")
 
     if "name-place" in task.prompt.lower().replace(" ", ""):
         matches = re.findall(r"([A-Za-z]+)-(First|Second|Third)", text, re.I)

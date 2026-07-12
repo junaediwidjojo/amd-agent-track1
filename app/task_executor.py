@@ -226,14 +226,33 @@ class TaskExecutor:
             )
 
         if backend == BackendType.LOCAL:
-            return self.provider.complete_local(
-                system=system,
-                user=user,
-                max_tokens=handler.max_tokens,
-                category=category.value,
-                task_id=task.task_id,
-                task=task,
-            )
+            try:
+                return self.provider.complete_local(
+                    system=system,
+                    user=user,
+                    max_tokens=handler.max_tokens,
+                    category=category.value,
+                    task_id=task.task_id,
+                    task=task,
+                )
+            except Exception as exc:
+                log_event(
+                    logger,
+                    "backend_local_failed",
+                    task_id=task.task_id,
+                    category=category.value,
+                    error=str(exc),
+                    exc_info=True,
+                )
+                return self.provider.complete_fireworks(
+                    system=system,
+                    user=user,
+                    max_tokens=handler.max_tokens,
+                    model=self.settings.pick_model(handler.preferred_model_tags),
+                    category=category,
+                    task_id=task.task_id,
+                    task=task,
+                )
 
         if backend == BackendType.FIREWORKS_STRONG:
             return self.provider.complete_fireworks(

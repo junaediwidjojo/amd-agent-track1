@@ -51,3 +51,22 @@ def test_verify_code_syntax() -> None:
     task = TaskItem(task_id="c1", prompt="Write a function named foo.")
     result = verify_answer("def foo():\n    return 1", task, TaskCategory.CODE_GENERATION)
     assert result.passed
+
+
+def test_verify_logic_solver_mismatch() -> None:
+    task = TaskItem(
+        task_id="l1",
+        prompt=(
+            "Three friends, Alice, Bob, and Carol, each own a different pet: cat, dog, fish. "
+            "Alice does not own the cat. Bob owns the dog. Who owns the fish?"
+        ),
+    )
+    result = verify_answer("Bob", task, TaskCategory.LOGIC)
+    assert not result.passed
+    assert result.retry_reason == "solver_mismatch"
+
+
+def test_verify_summarization_rejects_generic() -> None:
+    task = TaskItem(task_id="s2", prompt="Summarize in one sentence: Hello world.")
+    result = verify_answer("Unable to process this task.", task, TaskCategory.SUMMARIZATION)
+    assert not result.passed

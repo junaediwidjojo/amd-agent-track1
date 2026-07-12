@@ -72,7 +72,24 @@ class HybridProvider(BaseLLMProvider):
                 task_id=task_id,
                 task=task,
             )
-        return self._run_local(system, user, max_tokens, cat_enum, task_id, task)
+        try:
+            return self._run_local(system, user, max_tokens, cat_enum, task_id, task)
+        except Exception as exc:
+            log_event(
+                logger,
+                "hybrid_local_failed",
+                task_id=task_id,
+                category=cat_enum.value,
+                error=str(exc),
+                exc_info=True,
+            )
+            return self.complete_fireworks(
+                system, user, max_tokens,
+                model=self.settings.pick_model(self._primary_tags(cat_enum)),
+                category=cat_enum,
+                task_id=task_id,
+                task=task,
+            )
 
     def complete_fireworks(
         self,

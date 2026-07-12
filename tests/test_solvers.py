@@ -181,3 +181,16 @@ def test_summarization_bullets_respect_word_limit() -> None:
     for line in lines:
         assert line.startswith("- ")
         assert len(line.lstrip("- ").split()) <= 12
+
+
+def test_summarization_single_sentence_with_word_limit() -> None:
+    from app.solvers.summarization_solver import solve_summarization
+
+    prompt = (
+        "Condense the passage below into a single sentence of at most 25 words: "
+        "Cloud-native architectures rely on containers, microservices, and automated orchestration "
+        "to improve scalability, resilience, and deployment speed across distributed systems."
+    )
+    result = solve_summarization(prompt)
+    assert result is not None
+    assert len(result[0].split()) <= 25
