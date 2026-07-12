@@ -168,4 +168,4 @@ def solve_ner(text: str) -> tuple[str, float] | None:
     if not entities:
         return None
 
-    return (json.dumps(entities, ensure_ascii=False), 0.85)
+    return (json.dumps(entities, ensure_ascii=False), 0.95)

@@ -181,6 +181,52 @@ def check(task_id: str, answer: str) -> bool:
         }
         fn, cases = mapping[task_id]
         return run_tests(answer, fn, cases)
+    # Sentiment / regression edge set
+    if task_id == "edge-s01":
+        return "mixed" in answer.lower()
+    if task_id == "edge-s02":
+        return "negative" in answer.lower()
+    if task_id == "edge-s03":
+        return "positive" in answer.lower()
+    if task_id == "edge-s04":
+        return "neutral" in answer.lower()
+    if task_id == "edge-s05":
+        return "mixed" in answer.lower() and len(answer) > 15
+    if task_id == "edge-s06":
+        return "neutral" in answer.lower()
+    if task_id == "edge-s07":
+        return "negative" in answer.lower()
+    if task_id == "edge-s08":
+        return "mixed" in answer.lower() and len(answer) > 15
+    if task_id == "edge-s09":
+        return "positive" in answer.lower()
+    if task_id == "edge-s10":
+        return "neutral" in answer.lower()
+    if task_id == "edge-s11":
+        return "negative" in answer.lower()
+    if task_id == "edge-s12":
+        return "mixed" in answer.lower() and len(answer) > 10
+    if task_id == "edge-m01":
+        return answer.strip().replace(",", "") == "22"
+    if task_id == "edge-m02":
+        return answer.strip().replace(",", "") == "250"
+    if task_id == "edge-log01":
+        return answer.strip().lower() == "alice"
+    if task_id == "edge-cg01":
+        return run_tests(answer, "count_vowels", [{"args": ("Hello World",), "expected": 3}])
+    if task_id == "edge-cg02":
+        return run_tests(
+            answer,
+            "is_palindrome",
+            [{"args": ("A man, a plan, a canal: Panama",), "expected": True}],
+        )
+    if task_id == "edge-dbg01":
+        code = answer.split("\n\n")[0]
+        return run_tests(
+            code,
+            "is_even",
+            [{"args": (4,), "expected": True}, {"args": (3,), "expected": False}],
+        )
     return False
 
 

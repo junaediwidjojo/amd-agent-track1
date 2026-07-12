@@ -32,25 +32,20 @@ class SentimentHandler(BaseHandler):
 
     def post_process(self, text: str, task: TaskItem) -> str:
         cleaned = extract_final_answer(text)
-        lower = cleaned.lower()
         wants_justification = (
             "justify" in task.prompt.lower() or "justification" in task.prompt.lower()
         )
-        for label in ("mixed", "positive", "negative", "neutral"):
-            if label in lower:
-                if wants_justification:
-                    label_text = label.capitalize()
-                    remainder = re.sub(rf"(?i)^{label}\W*", "", cleaned).strip(" :-")
-                    if remainder and len(remainder) > 10:
-                        return f"{label_text}: {remainder}"
-                    return f"{label_text}: {remainder}" if remainder else label_text
-                return label.capitalize()
-        match = re.search(r"\b(positive|negative|mixed|neutral)\b", lower)
-        if match:
-            label_text = match.group(1).capitalize()
-            if wants_justification:
-                remainder = cleaned[match.end():].strip(" :-")
-                if remainder:
-                    return f"{label_text}: {remainder}"
+        # Prefer a leading label, then the first word-boundary match (not Mixed-first
+        # substring search, which misreads option lists like Positive/Negative/Mixed).
+        match = re.match(
+            r"^\s*(positive|negative|neutral|mixed)\b", cleaned, flags=re.I
+        ) or re.search(r"\b(positive|negative|neutral|mixed)\b", cleaned, flags=re.I)
+        if not match:
+            return cleaned
+        label_text = match.group(1).capitalize()
+        if not wants_justification:
             return label_text
-        return cleaned
+        remainder = cleaned[match.end() :].strip(" :-")
+        if remainder and len(remainder) > 10:
+            return f"{label_text}: {remainder}"
+        return f"{label_text}: {remainder}" if remainder else label_text

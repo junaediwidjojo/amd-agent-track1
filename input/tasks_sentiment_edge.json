@@ -1,0 +1,74 @@
+[
+  {
+    "task_id": "edge-s01",
+    "prompt": "Classify the sentiment as Positive, Negative, Neutral, or Mixed: I love the design, although the battery dies after two hours."
+  },
+  {
+    "task_id": "edge-s02",
+    "prompt": "Determine sentiment (Positive/Negative/Neutral/Mixed): The app kept crashing and support never replied to my tickets."
+  },
+  {
+    "task_id": "edge-s03",
+    "prompt": "Label sentiment Positive/Negative/Neutral/Mixed: Absolutely fantastic service from start to finish!"
+  },
+  {
+    "task_id": "edge-s04",
+    "prompt": "Classify the sentiment as Positive, Negative, Neutral, or Mixed: The manual is adequate and the setup steps are clearly described."
+  },
+  {
+    "task_id": "edge-s05",
+    "prompt": "Classify sentiment as Positive, Negative, Neutral, or Mixed, and justify in one sentence: Great flavor, but the portions were tiny and the bill was ridiculous."
+  },
+  {
+    "task_id": "edge-s06",
+    "prompt": "What is the sentiment (Positive/Negative/Neutral/Mixed)? The product arrived as expected and the documentation is adequate."
+  },
+  {
+    "task_id": "edge-s07",
+    "prompt": "Classify the sentiment as Positive, Negative, Neutral, or Mixed: Horrible smell, dirty floors, and rude staff."
+  },
+  {
+    "task_id": "edge-s08",
+    "prompt": "Classify the sentiment as Positive, Negative, Neutral, or Mixed, including a one-sentence justification: The camera is stunning; however the kit feels flimsy."
+  },
+  {
+    "task_id": "edge-s09",
+    "prompt": "Sentiment Positive/Negative/Neutral/Mixed: Speedy delivery and friendly support made checkout easy."
+  },
+  {
+    "task_id": "edge-s10",
+    "prompt": "Classify the sentiment as Positive, Negative, Neutral, or Mixed: Average quality; the documentation is adequate and factual."
+  },
+  {
+    "task_id": "edge-s11",
+    "prompt": "Determine the sentiment: Positive, Negative, Neutral, or Mixed \u2014 The UI is confusing and the workflow is frustrating."
+  },
+  {
+    "task_id": "edge-s12",
+    "prompt": "Classify sentiment Positive, Negative, Neutral, or Mixed and justify: Nice packaging, yet two items inside were broken."
+  },
+  {
+    "task_id": "edge-m01",
+    "prompt": "What is 96 / 8 + 5 * 2? Reply with only the final number."
+  },
+  {
+    "task_id": "edge-m02",
+    "prompt": "A shop has 400 items. It sells 25% in the morning and 50 more later. How many remain? Answer with only the final number."
+  },
+  {
+    "task_id": "edge-log01",
+    "prompt": "Alice, Bob, and Carol each prefer a different color: red, blue, green. Alice does not like green. Bob likes blue. Who likes red? Answer with only the name."
+  },
+  {
+    "task_id": "edge-cg01",
+    "prompt": "Write a Python function count_vowels(text) that returns the number of vowels (a,e,i,o,u) in text, case-insensitive. Return only runnable code, no explanation."
+  },
+  {
+    "task_id": "edge-cg02",
+    "prompt": "Implement is_palindrome(text) in Python, ignoring punctuation, spaces, and letter casing. Return only runnable code."
+  },
+  {
+    "task_id": "edge-dbg01",
+    "prompt": "This Python function should identify even numbers but is wrong:\n\ndef is_even(n):\n    return n % 2 == 1\n"
+  }
+]

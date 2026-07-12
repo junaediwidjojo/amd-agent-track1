@@ -194,3 +194,23 @@ def test_summarization_single_sentence_with_word_limit() -> None:
     result = solve_summarization(prompt)
     assert result is not None
     assert len(result[0].split()) <= 25
+
+
+def test_pure_negative_checkout() -> None:
+    result = solve_sentiment(
+        "Determine the sentiment (Positive/Negative/Neutral/Mixed): "
+        "The checkout process was confusing and support never replied to my emails."
+    )
+    assert result is not None
+    assert result[0] == "Negative"
+    assert result[1] >= 0.95
+
+
+def test_neutral_adequate_docs() -> None:
+    result = solve_sentiment(
+        "Classify the sentiment as Positive, Negative, Neutral, or Mixed: "
+        "The documentation is adequate and the API endpoints are clearly described."
+    )
+    assert result is not None
+    assert result[0] == "Neutral"
+    assert result[1] >= 0.95
