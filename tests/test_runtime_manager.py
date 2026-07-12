@@ -2,7 +2,19 @@
 
 import time
 
+import pytest
+
 from app.runtime_manager import RuntimeManager, RuntimePhase
+
+
+def test_default_max_runtime_is_540_seconds(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.config import get_settings
+
+    monkeypatch.setenv("FIREWORKS_API_KEY", "test-key")
+    monkeypatch.setenv("FIREWORKS_BASE_URL", "https://api.fireworks.ai/inference/v1")
+    monkeypatch.setenv("ALLOWED_MODELS", "model-a,model-b")
+    get_settings.cache_clear()
+    assert get_settings().max_runtime_seconds == 540.0
 
 
 def test_runtime_phase_normal() -> None:

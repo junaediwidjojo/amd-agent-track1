@@ -71,7 +71,8 @@ def test_runtime_budget_skips_remaining_tasks(mock_hybrid_provider: MagicMock) -
 
     with (
         patch("app.task_executor.TaskExecutor.execute", return_value=_mock_execution("answer")),
-        patch.object(Agent, "_runtime_budget_exceeded", side_effect=[False, True]),
+        patch.object(Agent, "_runtime_budget_exceeded", side_effect=[False, True, False]),
+        patch.object(Agent, "_run_pass2_retries"),
     ):
         agent = Agent(provider=mock_hybrid_provider, max_runtime_seconds=600.0)
         results = agent.process_tasks(tasks)

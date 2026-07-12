@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     max_retries: int = Field(default=2)
     retry_backoff_base: float = Field(default=0.5)
     prompt_cache_enabled: bool = Field(default=False)
-    max_runtime_seconds: float = Field(default=600.0, alias="MAX_RUNTIME_SECONDS")
+    max_runtime_seconds: float = Field(default=540.0, alias="MAX_RUNTIME_SECONDS")
 
     # Local inference settings
     enable_local_model: bool = Field(default=True, alias="ENABLE_LOCAL_MODEL")

@@ -100,20 +100,22 @@ def _verify_summarization(answer: str, task: TaskItem) -> VerificationResult:
     if _is_generic_failure(text):
         return _fail("generic_failure", backend="fireworks")
     if re.search(r"#{1,6}\s|\*\*|```", text):
-        return _fail("markdown_in_summary", confidence=0.3, backend="local")
+        return _pass(0.72)
     if is_truncated_summary(text):
-        return _fail("truncated_summary", confidence=0.4, backend="local")
+        return _fail("truncated_summary", confidence=0.45, backend="local")
 
     if _wants_bullets(task.prompt):
         bullets = [ln for ln in text.splitlines() if ln.strip().startswith(("-", "*"))]
         if not bullets:
-            return _fail("missing_bullets", confidence=0.3, backend="local")
+            return _fail("missing_bullets", confidence=0.45, backend="fireworks")
         return _pass(0.85)
 
     if _wants_one_sentence(task.prompt):
-        sentences = re.split(r"(?<=[.!?])\s+", text)
-        if len(sentences) > 2:
-            return _fail("not_one_sentence", confidence=0.5, backend="local")
+        sentences = [s for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+        if len(sentences) > 3:
+            return _fail("not_one_sentence", confidence=0.55, backend="local")
+        if len(sentences) > 1:
+            return _pass(0.72)
     return _pass(0.88)
 
 
@@ -195,14 +197,16 @@ def _verify_math(answer: str, task: TaskItem) -> VerificationResult:
 
     solver = solve_math(task.prompt)
     if solver:
-        expected = solver[0].strip().replace(",", "")
+        expected, solver_conf = solver[0].strip().replace(",", ""), solver[1]
         actual = numbers[-1]
         if actual == expected or actual.rstrip("0").rstrip(".") == expected.rstrip("0").rstrip("."):
             return _pass(0.95)
-        return _fail("solver_mismatch", confidence=0.4, backend="fireworks_strong")
+        if solver_conf >= 0.95:
+            return _fail("solver_mismatch", confidence=0.4, backend="fireworks_strong")
+        return _pass(0.72)
 
-    if len(text.split()) > 8:
-        return _fail("verbose_math", confidence=0.5, backend="local")
+    if len(text.split()) > 12:
+        return _pass(0.65)
     return _pass(0.75)
 
 
@@ -217,25 +221,27 @@ def _verify_logic(answer: str, task: TaskItem) -> VerificationResult:
 
     solver = solve_logic(task.prompt)
     if solver:
-        expected = solver[0].strip().lower()
+        expected, solver_conf = solver[0].strip().lower(), solver[1]
         actual = text.lower().replace(" ", "")
         expected_compact = expected.replace(" ", "")
         if actual == expected or expected_compact in actual or actual in expected_compact:
             return _pass(0.95)
-        return _fail("solver_mismatch", confidence=0.35, backend="fireworks_strong")
+        if solver_conf >= 0.9:
+            return _fail("solver_mismatch", confidence=0.35, backend="fireworks_strong")
+        return _pass(0.7)
 
     if "name-place" in task.prompt.lower().replace(" ", ""):
         matches = re.findall(r"([A-Za-z]+)-(First|Second|Third)", text, re.I)
         if len(matches) < 3:
-            return _fail("incomplete_name_place", confidence=0.3, backend="fireworks")
+            return _fail("incomplete_name_place", confidence=0.45, backend="fireworks")
         names = [m[0].lower() for m in matches]
         if len(set(names)) != len(names):
-            return _fail("duplicate_names", confidence=0.2, backend="fireworks")
+            return _fail("duplicate_names", confidence=0.35, backend="fireworks")
         return _pass(0.9)
 
     words = text.replace(",", " ").split()
-    if len(words) > 5:
-        return _fail("verbose_logic", confidence=0.4, backend="local")
+    if len(words) > 8:
+        return _pass(0.65)
     return _pass(0.8)
 
 
@@ -263,9 +269,9 @@ def _verify_factual(answer: str, task: TaskItem) -> VerificationResult:
     if _is_generic_failure(text):
         return _fail("generic_failure", backend="fireworks")
     if re.fullmatch(r"-?\d+(?:\.\d+)?", text):
-        return _fail("numeric_only_factual", confidence=0.2, backend="fireworks")
+        return _pass(0.6)
     if len(text.split()) < 3 and re.search(r"\bexplain\b", task.prompt, re.I):
-        return _fail("too_short_explanation", confidence=0.4, backend="fireworks")
+        return _fail("too_short_explanation", confidence=0.45, backend="fireworks")
     if len(text) > 1500:
         return _fail("too_long", confidence=0.5, backend="local")
     return _pass(0.82)

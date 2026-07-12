@@ -108,7 +108,7 @@ class HybridProvider(BaseLLMProvider):
         result.metrics.backend = "fireworks"
         result.metrics.model = model
 
-        if verification.passed and verification.confidence >= self.settings.local_confidence_threshold:
+        if verification.passed and verification.confidence >= 0.6:
             return result
 
         escalation = self.pick_escalation_model(category)
@@ -209,7 +209,7 @@ class HybridProvider(BaseLLMProvider):
 
         if (
             verification.passed
-            and verification.confidence >= self.settings.local_confidence_threshold
+            and verification.confidence >= max(0.6, self.settings.local_confidence_threshold - 0.1)
         ):
             return local_result
 

@@ -196,6 +196,44 @@ class TaskExecutor:
             latency_ms=latency,
         )
 
+    def execute_retry(
+        self,
+        task: TaskItem,
+        category: TaskCategory,
+        *,
+        backend: BackendType,
+        pass_number: int = 2,
+    ) -> TaskExecutionResult:
+        """Re-run one task from a forced backend (pass-2 low-confidence retries)."""
+        handler = self.handlers[category]
+        started = time.perf_counter()
+        candidate = self._generate(task, category, handler, backend)
+        answer = handler.post_process(candidate.text, task).strip() or "No answer generated."
+        verification = verify_answer(answer, task, category)
+        candidate.metrics.confidence = verification.confidence
+        self.runtime.record_backend(backend.value)
+        latency = (time.perf_counter() - started) * 1000
+        candidate.metrics.latency_ms = latency
+        self._log_task(
+            task,
+            category,
+            backend.value,
+            verification,
+            retry_count=pass_number,
+            escalation_reason=f"pass{pass_number}_retry",
+            latency_ms=latency,
+        )
+        return TaskExecutionResult(
+            answer=answer,
+            metrics=candidate.metrics,
+            category=category,
+            verification=verification,
+            backend=backend.value,
+            retry_count=pass_number,
+            escalation_reason=f"pass{pass_number}_retry",
+            latency_ms=latency,
+        )
+
     def _generate(
         self,
         task: TaskItem,

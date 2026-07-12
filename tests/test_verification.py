@@ -11,6 +11,15 @@ def test_verify_math_passes_numeric() -> None:
     assert result.confidence >= 0.7
 
 
+def test_verify_math_accepts_numeric_when_solver_uncertain() -> None:
+    task = TaskItem(
+        task_id="m3",
+        prompt="A complex word problem with ambiguous phrasing yields 42 as the answer.",
+    )
+    result = verify_answer("42", task, TaskCategory.MATH)
+    assert result.passed
+
+
 def test_verify_math_solver_mismatch() -> None:
     task = TaskItem(
         task_id="m2",

@@ -24,26 +24,40 @@ class BackendType(str, Enum):
     FIREWORKS_STRONG = "fireworks_strong"
 
 
-def has_deterministic_solver(category: TaskCategory, task: TaskItem) -> bool:
-    """Return True when a local solver can produce a candidate answer."""
-    prompt = task.prompt
+_DETERMINISTIC_MIN_CONFIDENCE = 0.95
+
+
+def _solver_result(category: TaskCategory, prompt: str) -> tuple[str, float] | None:
+    """Return solver output with confidence, or None when unavailable."""
     if category == TaskCategory.MATH:
-        return solve_math(prompt) is not None
+        return solve_math(prompt)
     if category == TaskCategory.SENTIMENT:
-        return build_sentiment_answer(prompt) is not None
+        return build_sentiment_answer(prompt)
     if category == TaskCategory.SUMMARIZATION:
-        return solve_summarization(prompt) is not None
+        return solve_summarization(prompt)
     if category == TaskCategory.NER:
-        return solve_ner(prompt) is not None
+        return solve_ner(prompt)
     if category == TaskCategory.LOGIC:
-        return solve_logic(prompt) is not None
+        return solve_logic(prompt)
     if category == TaskCategory.FACTUAL:
-        return solve_factual(prompt) is not None
+        return solve_factual(prompt)
     if category == TaskCategory.CODE_GENERATION:
-        return solve_codegen(prompt) is not None
+        return solve_codegen(prompt)
     if category == TaskCategory.DEBUGGING:
-        return try_fix_debug_task(prompt) is not None
-    return False
+        fixed = try_fix_debug_task(prompt)
+        return (fixed, 1.0) if fixed else None
+    return None
+
+
+def has_deterministic_solver(
+    category: TaskCategory,
+    task: TaskItem,
+    *,
+    min_confidence: float = _DETERMINISTIC_MIN_CONFIDENCE,
+) -> bool:
+    """Return True when a high-confidence local solver can answer reliably."""
+    result = _solver_result(category, task.prompt)
+    return result is not None and result[1] >= min_confidence
 
 
 def is_local_suitable(category: TaskCategory, settings: Settings | None = None) -> bool:
