@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from collections import defaultdict
 from pathlib import Path
 
@@ -104,6 +105,82 @@ def check(task_id: str, answer: str) -> bool:
         }
         fn, cases = mapping[task_id]
         return run_tests(answer, fn, cases)
+
+    # Benchmark set (30 tasks)
+    if task_id == "bm-f01":
+        lower = answer.lower()
+        return "ottawa" in lower and "atlantic" in lower
+    if task_id == "bm-f02":
+        lower = answer.lower()
+        return "hash" in lower and "o(1)" in lower.replace(" ", "")
+    if task_id == "bm-f03":
+        return "nile" in answer.lower()
+    if task_id == "bm-f04":
+        lower = answer.lower()
+        return "domain name" in lower or "dns" in lower
+    if task_id == "bm-m01":
+        return answer.strip().replace(",", "") == "517"
+    if task_id == "bm-m02":
+        return answer.strip().replace(",", "") == "644.20"
+    if task_id == "bm-m03":
+        return answer.strip().replace(",", "") == "3136"
+    if task_id == "bm-m04":
+        return answer.strip().replace(",", "") == "33"
+    if task_id == "bm-s04":
+        return "neutral" in answer.lower()
+    if task_id == "bm-f05":
+        return "everest" in answer.lower()
+    if task_id == "bm-s01":
+        return "positive" in answer.lower()
+    if task_id == "bm-s02":
+        return "negative" in answer.lower()
+    if task_id == "bm-s03":
+        return "mixed" in answer.lower() and len(answer) > 15
+    if task_id == "bm-sum01":
+        return 5 <= len(re.findall(r"[A-Za-z']+", answer)) <= 30
+    if task_id == "bm-sum02":
+        bullets = [line for line in answer.splitlines() if line.strip().startswith("-")]
+        return len(bullets) == 3
+    if task_id == "bm-sum03":
+        return 5 <= len(re.findall(r"[A-Za-z']+", answer)) <= 40
+    if task_id in ("bm-ner01", "bm-ner02", "bm-ner03"):
+        try:
+            data = json.loads(answer)
+        except json.JSONDecodeError:
+            return False
+        blob = json.dumps(data).lower()
+        need = {
+            "bm-ner01": ["tim", "apple", "cupertino"],
+            "bm-ner02": ["elena", "spotify", "stockholm"],
+            "bm-ner03": ["deepmind", "london"],
+        }[task_id]
+        return all(token in blob for token in need)
+    if task_id.startswith("bm-dbg"):
+        code = answer.split("\n\n")[0]
+        mapping = {
+            "bm-dbg01": ("is_even", [{"args": (4,), "expected": True}, {"args": (3,), "expected": False}]),
+            "bm-dbg02": ("mean", [{"args": ([2, 4, 6],), "expected": 4.0}]),
+            "bm-dbg03": ("unique_preserve", [{"args": ([1, 2, 2, 3, 1],), "expected": [1, 2, 3]}]),
+            "bm-dbg04": ("find_max", [{"args": ([1, 9, 3],), "expected": 9}]),
+        }
+        fn, cases = mapping[task_id]
+        return run_tests(code, fn, cases)
+    if task_id == "bm-log01":
+        return answer.strip().lower() == "alice"
+    if task_id == "bm-log02":
+        compact = answer.lower().replace(" ", "")
+        return "devon-first" in compact and "casey-second" in compact and "priya-third" in compact
+    if task_id == "bm-log03":
+        return answer.strip().lower() == "priya"
+    if task_id.startswith("bm-cg"):
+        mapping = {
+            "bm-cg01": ("count_vowels", [{"args": ("Hello World",), "expected": 3}]),
+            "bm-cg02": ("is_palindrome", [{"args": ("A man, a plan, a canal: Panama",), "expected": True}]),
+            "bm-cg03": ("merge_intervals", [{"args": ([[1, 3], [2, 6], [8, 10]],), "expected": [[1, 6], [8, 10]]}]),
+            "bm-cg04": ("second_largest", [{"args": ([5, 5, 3],), "expected": 3}]),
+        }
+        fn, cases = mapping[task_id]
+        return run_tests(answer, fn, cases)
     return False
 
 
@@ -115,11 +192,21 @@ def main() -> int:
     args = parser.parse_args()
 
     tasks = read_tasks(args.input)
+    runtime_seconds = 0.0
+    fireworks_tokens = 0
     if args.run:
         out = Path(args.output)
         out.parent.mkdir(parents=True, exist_ok=True)
-        results = Agent().process_tasks(tasks)
-        out.write_text(json.dumps([r.model_dump() for r in results], indent=2))
+        agent = Agent()
+        started = time.perf_counter()
+        report = agent.benchmark(tasks)
+        runtime_seconds = time.perf_counter() - started
+        out.write_text(json.dumps([r.model_dump() for r in report.results], indent=2))
+        fireworks_tokens = sum(
+            m.total_tokens
+            for m in report.per_task_metrics.values()
+            if m.backend != "local"
+        )
 
     payload = json.loads(Path(args.output).read_text())
     answers = {item["task_id"]: item["answer"] for item in payload}
@@ -135,6 +222,8 @@ def main() -> int:
         "total": total,
         "passed": passed,
         "accuracy_pct": round(100 * passed / total, 1) if total else 0.0,
+        "runtime_seconds": round(runtime_seconds, 2) if args.run else None,
+        "fireworks_tokens": fireworks_tokens if args.run else None,
         "by_category": {
             cat: {
                 "passed": sum(1 for _, ok in pairs if ok),

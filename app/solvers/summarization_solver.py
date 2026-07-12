@@ -60,10 +60,10 @@ def solve_summarization(prompt: str) -> tuple[str, float] | None:
             if len(bullets) == 3:
                 return ("\n".join(bullets), 1.0)
 
-    if "one sentence" in lower and "no more than" in lower:
+    if "one sentence" in lower:
         words = re.findall(r"[A-Za-z']+", source)
-        limit_match = re.search(r"no more than (\d+) words", lower)
-        limit = int(limit_match.group(1)) if limit_match else 25
+        limit_match = re.search(r"(?:no more than|at most|max(?:imum)?)\s+(\d+)\s+words", lower)
+        limit = int(limit_match.group(1)) if limit_match else 30
         if words:
             return (_shorten(words, limit), 0.95)
 

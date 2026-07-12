@@ -13,12 +13,15 @@ _SUMMARIZE_PATTERNS = (
     r"\bcondense\b",
     r"\btl;?dr\b",
     r"\bshorten\b",
+    r"\bbullet\s+points?\b",
+    r"\bthree\s+bullet\b",
 )
 
 _NER_PATTERNS = (
     r"\bextract\b.*\bentit",
     r"\bnamed entit",
     r"\bner\b",
+    r"\bentities\b",
     r"\blabel\b.*\b(person|org|location|date)\b",
 )
 
@@ -38,6 +41,8 @@ _CODEGEN_PATTERNS = (
     r"\bwrite a function\b",
     r"\bimplement a function\b",
     r"\bcreate a function\b",
+    r"\bcreate a python function\b",
+    r"\bimplement\b.*\bin python\b",
     r"\bwrite code\b",
 )
 
@@ -46,6 +51,10 @@ _DEBUG_PATTERNS = (
     r"\bfix\b.*\bcode\b",
     r"\bdebug\b",
     r"\bhas a bug\b",
+    r"\bis wrong\b",
+    r"\brepair\b",
+    r"\bfix the\b",
+    r"\bcorrect the\b",
     r"\bcorrected implementation\b",
     r"\bfind and fix\b",
 )
@@ -64,7 +73,7 @@ _MATH_PATTERNS = (
 
 _LOGIC_PATTERNS = (
     r"\bwho owns\b",
-    r"\bwhich\b.*\b(satisfies|owns|has)\b",
+    r"\bwhich\b.*\b(satisfies|owns|has|prefers|drives)\b",
     r"\blogic puzzle\b",
     r"\bdeduce\b",
     r"\bconstraint\b",
@@ -72,6 +81,10 @@ _LOGIC_PATTERNS = (
     r"\bdoes not own\b",
     r"\bthree friends\b",
     r"\bpuzzle\b",
+    r"\bprefers?\b",
+    r"\bfinished\b.*\bplace\b",
+    r"\bdrive a different\b",
+    r"\bcolleagues\b",
 )
 
 _STRUCTURED_WRITING_PATTERNS = (

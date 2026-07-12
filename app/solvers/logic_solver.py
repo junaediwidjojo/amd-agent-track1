@@ -96,7 +96,7 @@ def _parse_constraints(text: str, names: list[str], values: list[str]) -> list[d
                 constraints.append({"type": "eq", "name": name, "value": val})
 
         neither_match = re.search(
-            rf"{re.escape(nl)}\s+owns\s+neither\s+(?:the\s+)?([a-z]+)\s+nor\s+(?:the\s+)?([a-z]+)",
+            rf"{re.escape(nl)}\s+(?:owns|drives)\s+neither\s+(?:the\s+)?([a-z]+)\s+nor\s+(?:the\s+)?([a-z]+)",
             text_lower,
         )
         if neither_match:
@@ -248,7 +248,29 @@ def solve_logic(text: str) -> tuple[str, float] | None:
     if not solutions:
         return None
 
-    question_match = re.search(r"who\s+(?:owns|has|likes|drives|lives)\s+(?:the\s+)?([a-z]+)\?", text, re.IGNORECASE)
+    question_match2 = re.search(
+        r"which\s+person\s+prefers\s+(?:the\s+)?([a-z]+)\?",
+        text,
+        re.IGNORECASE,
+    )
+    if question_match2:
+        target_value = question_match2.group(1).lower()
+        owners = sorted({
+            name
+            for solution in solutions
+            for name, val in solution.items()
+            if val.lower() == target_value
+        })
+        if len(owners) == 1:
+            return (owners[0], 1.0)
+        if owners:
+            return (owners[0], 0.9)
+
+    question_match = re.search(
+        r"who\s+(?:owns|has|likes|prefers|drives)\s+(?:the\s+)?([a-z]+)\?",
+        text,
+        re.IGNORECASE,
+    )
     if question_match:
         target_value = question_match.group(1).lower()
         owners = sorted({

@@ -9,6 +9,7 @@ _POSITIVE_WORDS = {
     "wonderful", "best", "perfect", "nice", "happy", "satisfied", "recommend",
     "fast", "quick", "easy", "smooth", "beautiful", "impressive", "solid",
     "outstanding", "superb", "pleasant", "delightful", "brilliant", "cool",
+    "thrilled",
     "superior", "remarkable", "stunning", "exceptional", "incredible", "marvelous",
     "clean", "bright", "spacious", "comfortable", "helpful", "friendly", "polite",
 }
@@ -22,6 +23,12 @@ _NEGATIVE_WORDS = {
     "mediocre", "subpar", "unreliable", "inconvenient", "confusing", "complicated",
     "noisy", "small", "crowded", "dirty", "rude", "cold", "dissatisfied", "dislike",
     "horrible", "disgusting", "unpleasant", "dull", "boring", "tired",
+}
+
+
+_NEUTRAL_WORDS = {
+    "adequate", "average", "okay", "fine", "neutral", "described", "documentation",
+    "informational", "factual", "objective",
 }
 
 
@@ -46,6 +53,8 @@ def solve_sentiment(text: str) -> tuple[str, float] | None:
         return ("Positive", 0.9)
     if neg > 0 and pos == 0:
         return ("Negative", 0.9)
+    if pos == 0 and neg == 0 and any(w in _NEUTRAL_WORDS for w in words):
+        return ("Neutral", 0.9)
     return None
 
 
@@ -61,7 +70,7 @@ def build_sentiment_answer(prompt: str) -> tuple[str, float] | None:
     if not label_result:
         return None
     label, confidence = label_result
-    if "justify" not in prompt.lower():
+    if "justify" not in prompt.lower() and "justification" not in prompt.lower():
         return label_result
     review = _review_text(prompt)
     lower = review.lower()

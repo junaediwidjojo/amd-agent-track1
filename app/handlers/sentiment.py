@@ -33,7 +33,9 @@ class SentimentHandler(BaseHandler):
     def post_process(self, text: str, task: TaskItem) -> str:
         cleaned = extract_final_answer(text)
         lower = cleaned.lower()
-        wants_justification = "justify" in task.prompt.lower()
+        wants_justification = (
+            "justify" in task.prompt.lower() or "justification" in task.prompt.lower()
+        )
         for label in ("mixed", "positive", "negative", "neutral"):
             if label in lower:
                 if wants_justification:

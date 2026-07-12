@@ -99,32 +99,35 @@ def solve_math(text: str) -> tuple[str, float] | None:
     decimals, whole = _parse_output_constraints(text)
 
     growth_match = re.search(
-        r"(?:had|has|with)\s+([\d,]+(?:\.\d+)?)\s+.*?grew?\s+(\d+(?:\.\d+)?)\s*%\s+month over month.*?"
-        r"after\s+(\d+)\s+months?",
+        r"(?:had|has|with)\s+([\d,]+(?:\.\d+)?)\s+.*?"
+        r"(?:grow(?:s|n|w)?|grew)\s+(\d+(?:\.\d+)?)\s*%\s+(?:month over month|quarter over quarter).*?"
+        r"after\s+(\d+)\s+(?:months?|quarters?)",
         text_lower,
         re.DOTALL,
     )
     if growth_match:
         start = float(_normalize_number_text(growth_match.group(1)))
         rate = float(growth_match.group(2)) / 100
-        months = int(growth_match.group(3))
-        result = start * ((1 + rate) ** months)
+        periods = int(growth_match.group(3))
+        result = start * ((1 + rate) ** periods)
         if whole:
             return (str(round(result)), 1.0)
         return (_format_number(result, decimals=decimals, whole=whole), 1.0)
 
     discount_match = re.search(
-        r"(?:price|cost|is)\s+(?:of\s+[^$]*)?\$?([\d,]+(?:\.\d+)?).*?"
-        r"discounted by\s+(\d+(?:\.\d+)?)\s*%.*?"
-        r"(?:coupon|additional|then).*?"
-        r"(?:reduces?|subtract|minus|by)\s+(?:the\s+\w+\s+price\s+by\s+)?\$?([\d,]+(?:\.\d+)?)",
+        r"(?:price|cost|is|costs)\s+(?:of\s+[^$]*)?\$?([\d,]+(?:\.\d+)?).*?"
+        r"(?:discounted by|receives?\s+a)\s+(\d+(?:\.\d+)?)\s*%.*?"
+        r"(?:coupon|additional|then|off).*?"
+        r"(?:\$([\d,]+(?:\.\d+)?)\s+off\s+coupon.*?applied|"
+        r"(?:reduces?|subtract|minus|applied|by)\s+(?:the\s+\w+\s+price\s+by\s+)?\$?([\d,]+(?:\.\d+)?))",
         text_lower,
         re.DOTALL,
     )
     if discount_match:
         price = float(_normalize_number_text(discount_match.group(1)))
         pct = float(discount_match.group(2))
-        coupon = float(_normalize_number_text(discount_match.group(3)))
+        coupon_raw = discount_match.group(3) or discount_match.group(4)
+        coupon = float(_normalize_number_text(coupon_raw))
         result = price * (1 - pct / 100) - coupon
         return (_format_number(result, decimals=decimals, whole=whole), 1.0)
 
@@ -156,7 +159,7 @@ def solve_math(text: str) -> tuple[str, float] | None:
         base = float(_normalize_number_text(base_match.group(1))) if base_match else numbers[0]
 
         pct_match = re.search(
-            r"(\d+(?:\.\d+)?)\s*%\s+(?:are\s+)?(?:shipped|sold|removed|used)",
+            r"(\d+(?:\.\d+)?)\s*%\s+(?:are\s+)?(?:shipped|sold|removed|used|dispatched)",
             text_lower,
         )
         if not pct_match:
@@ -166,7 +169,7 @@ def solve_math(text: str) -> tuple[str, float] | None:
             remaining = base * (1 - pct / 100)
             after_pct = text_lower[pct_match.end():]
             extra_match = re.search(
-                r"(?:another|additional|then|and)\s+(\d+(?:\.\d+)?)\b",
+                r"(?:another|additional|then|and|later,?)\s+(\d+(?:\.\d+)?)\b",
                 after_pct,
             )
             if extra_match:

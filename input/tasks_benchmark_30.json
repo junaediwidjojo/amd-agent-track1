@@ -1,0 +1,122 @@
+[
+  {
+    "task_id": "bm-f01",
+    "prompt": "Name Canada's capital and the ocean along its eastern seaboard. Reply as City; Ocean."
+  },
+  {
+    "task_id": "bm-f02",
+    "prompt": "In two or three sentences, explain why hash tables typically offer O(1) average-time lookups."
+  },
+  {
+    "task_id": "bm-f03",
+    "prompt": "Which major river runs through Cairo? Respond with only the river's name."
+  },
+  {
+    "task_id": "bm-f04",
+    "prompt": "What does DNS mean, and why do networks rely on it? Keep your answer to one sentence."
+  },
+  {
+    "task_id": "bm-m01",
+    "prompt": "A factory inventory has 720 units. In the morning, 15% are dispatched. Later, 95 more units ship out. How many units remain? Answer with only the final number."
+  },
+  {
+    "task_id": "bm-m02",
+    "prompt": "An appliance costs $890.00. It receives a 22% discount, then a $50 off coupon is applied to the reduced price. What is the final price? Answer with only the number, rounded to two decimal places."
+  },
+  {
+    "task_id": "bm-m03",
+    "prompt": "A startup had 2,500 subscribers in Q1 and grows 12% quarter over quarter. How many subscribers after 2 quarters? Answer rounded to the nearest whole number."
+  },
+  {
+    "task_id": "bm-m04",
+    "prompt": "Calculate: what is 144 / 12 + 7 * 3? Reply with only the final number."
+  },
+  {
+    "task_id": "bm-s01",
+    "prompt": "Label this product review as Positive, Negative, Neutral, or Mixed: Absolutely thrilled with the camera quality and battery endurance!"
+  },
+  {
+    "task_id": "bm-s02",
+    "prompt": "Determine the sentiment (Positive/Negative/Neutral/Mixed): The checkout process was confusing and support never replied to my emails."
+  },
+  {
+    "task_id": "bm-s03",
+    "prompt": "Classify sentiment as Positive, Negative, Neutral, or Mixed, including a one-sentence justification: The hotel breakfast was excellent, however our room faced a noisy construction site all night."
+  },
+  {
+    "task_id": "bm-sum01",
+    "prompt": "Condense the passage below into a single sentence of at most 25 words: Cloud-native architectures rely on containers, microservices, and automated orchestration to improve scalability, resilience, and deployment speed across distributed systems."
+  },
+  {
+    "task_id": "bm-sum02",
+    "prompt": "Provide exactly three bullet points (max 12 words each) summarizing: Regular exercise strengthens the heart and lungs. It also reduces stress hormones and improves sleep quality. Over time, consistent activity lowers the risk of chronic diseases like diabetes."
+  },
+  {
+    "task_id": "bm-sum03",
+    "prompt": "Summarize in one sentence: Quantum computing leverages superposition and entanglement to explore many computational paths simultaneously, promising breakthroughs in cryptography and drug discovery."
+  },
+  {
+    "task_id": "bm-ner01",
+    "prompt": "List every named entity with its type as JSON [{\"text\":..., \"type\":...}]: Tim Cook unveiled the iPhone 17 at Apple Park in Cupertino during September 2025."
+  },
+  {
+    "task_id": "bm-ner02",
+    "prompt": "Return a JSON array of entities (text, type) found in: Elena Rodriguez moved to Spotify headquarters in Stockholm this February with her manager Omar Hassan."
+  },
+  {
+    "task_id": "bm-ner03",
+    "prompt": "Extract named entities as JSON with keys text and type from: Google DeepMind published new research in London last November."
+  },
+  {
+    "task_id": "bm-dbg01",
+    "prompt": "This Python function should identify even numbers but is wrong:\n\ndef is_even(n):\n    return n % 2 == 1\n"
+  },
+  {
+    "task_id": "bm-dbg02",
+    "prompt": "Fix the mean calculator — it should return the average of a list:\n\ndef mean(values):\n    return sum(values) / len\n"
+  },
+  {
+    "task_id": "bm-dbg03",
+    "prompt": "The deduplication helper keeps duplicates instead of skipping them. Repair it:\n\ndef unique_preserve(items):\n    seen = []\n    out = []\n    for item in items:\n        if item in seen:\n            out.append(item)\n        else:\n            seen.append(item)\n    return out\n"
+  },
+  {
+    "task_id": "bm-dbg04",
+    "prompt": "This max-finder always returns the first element. Correct the implementation:\n\ndef find_max(nums):\n    return nums[0]\n"
+  },
+  {
+    "task_id": "bm-log01",
+    "prompt": "Alice, Bob, and Carol each prefer a different color: red, blue, green. Alice does not like green. Bob likes blue. Which person prefers red? Answer with only the name."
+  },
+  {
+    "task_id": "bm-log02",
+    "prompt": "Priya, Devon, and Casey finished a cycling race in first, second, and third place. Priya did not finish first. Devon finished before Casey. Casey did not finish third. State placements as Name-Place, Name-Place, Name-Place."
+  },
+  {
+    "task_id": "bm-log03",
+    "prompt": "Four colleagues—Nina, Omar, Priya, and Quinn—each drive a different vehicle: sedan, truck, van, motorcycle. Nina does not drive the sedan. Omar drives neither the van nor the sedan. Quinn drives the motorcycle. Who drives the sedan? Answer with only the name."
+  },
+  {
+    "task_id": "bm-cg01",
+    "prompt": "Write a Python function count_vowels(text) that returns the number of vowels (a,e,i,o,u) in text, case-insensitive. Return only runnable code, no explanation."
+  },
+  {
+    "task_id": "bm-cg02",
+    "prompt": "Implement is_palindrome(text) in Python, ignoring punctuation, spaces, and letter casing. Return only runnable code."
+  },
+  {
+    "task_id": "bm-cg03",
+    "prompt": "Create a Python function merge_intervals(intervals) that merges overlapping intervals and returns them sorted by start. Code only, no commentary."
+  },
+  {
+    "task_id": "bm-cg04",
+    "prompt": "Implement second_largest(nums) in Python to return the second-largest value, treating duplicates correctly (e.g. [5,5,3] -> 3). Return only runnable code."
+  },
+  {
+    "task_id": "bm-f05",
+    "prompt": "What is the tallest mountain on Earth? Reply with only the mountain name."
+  },
+  {
+    "task_id": "bm-s04",
+    "prompt": "Classify the sentiment as Positive, Negative, Neutral, or Mixed: The documentation is adequate and the API endpoints are clearly described."
+  }
+]

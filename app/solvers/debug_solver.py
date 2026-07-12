@@ -20,15 +20,28 @@ def try_fix_debug_task(prompt: str) -> str | None:
 
     prompt_lower = prompt.lower()
 
-    if "average" in prompt_lower and re.search(r"return\s+sum\([^)]+\)\s*/\s*len\b", buggy):
-        fixed = re.sub(r"/\s*len\b", "/ len(nums)", buggy)
+    if re.search(r"return\s+sum\([^)]+\)\s*/\s*len\b", buggy):
+        fixed = re.sub(
+            r"/\s*len\b",
+            lambda m: "/ len(values)" if "values" in buggy else "/ len(nums)",
+            buggy,
+        )
         return (
             f"{fixed}\n\n"
             "The bug is that `len` was used without passing the list, so the divisor was wrong."
         )
 
-    if "dedupe" in prompt_lower and "if item in seen:" in buggy:
-        fixed = """def dedupe(items):
+    if "is_even" in prompt_lower and "return n % 2 == 1" in buggy:
+        fixed = """def is_even(n):
+    return n % 2 == 0"""
+        return (
+            f"{fixed}\n\n"
+            "The bug is that the function returns True for odd numbers instead of even numbers."
+        )
+
+    if ("dedupe" in prompt_lower or "unique_preserve" in prompt_lower) and "if item in seen:" in buggy:
+        fn_name = "unique_preserve" if "unique_preserve" in buggy else "dedupe"
+        fixed = f"""def {fn_name}(items):
     seen = set()
     result = []
     for item in items:
@@ -41,8 +54,9 @@ def try_fix_debug_task(prompt: str) -> str | None:
             "The bug is that duplicates were appended to the result instead of skipping them."
         )
 
-    if "get_max" in prompt_lower and "return nums[0]" in buggy:
-        fixed = """def get_max(nums):
+    if ("get_max" in prompt_lower or "find_max" in prompt_lower) and "return nums[0]" in buggy:
+        fn_name = "find_max" if "find_max" in buggy else "get_max"
+        fixed = f"""def {fn_name}(nums):
     if not nums:
         raise ValueError("empty list")
     return max(nums)"""

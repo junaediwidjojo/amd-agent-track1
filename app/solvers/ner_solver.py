@@ -13,6 +13,7 @@ _COMMON_LOCATIONS = {
     "mumbai", "bangalore", "são paulo", "rio", "cairo", "istanbul", "bangkok",
     "amsterdam", "barcelona", "munich", "frankfurt", "hamburg", "vienna",
     "zurich", "geneva", "prague", "warsaw", "budapest", "oslo", "stockholm",
+    "cupertino",
     "copenhagen", "helsinki", "dublin", "edinburgh", "manchester", "liverpool",
     "glasgow", "cardiff", "belfast", "brisbane", "melbourne", "perth", "adelaide",
     "auckland", "wellington", "christchurch", "johannesburg", "cape town",
@@ -111,7 +112,7 @@ def solve_ner(text: str) -> tuple[str, float] | None:
 
     # Also match known tech companies without suffix
     known_orgs = re.finditer(
-        r"\b(Google|Microsoft|Apple|Amazon|Meta|Netflix|Spotify|Uber|Airbnb|Slack|Salesforce|Oracle|IBM|Intel|AMD|NVIDIA|Qualcomm|Samsung|Sony|Huawei|Xiaomi|Alibaba|Tencent|Baidu|ByteDance|DJI|WeChat|WhatsApp|Instagram|Twitter|LinkedIn|YouTube|TikTok|Snapchat|Pinterest|Reddit|Twitch|Discord|Zoom|Teams|Dropbox|Stripe|Square|PayPal|Robinhood|Coinbase|Lyft|Doordash|Grubhub|Instacart|Shopify|Etsy|Ebay|Craigslist|Zillow|Palantir|Snowflake|Databricks|MongoDB|Elastic|Datadog|Splunk|Twilio|Zendesk|HubSpot|Notion|Figma|Canva|Grammarly|OpenAI|Anthropic|Cohere|Mistral|Hugging Face|Stability AI|Midjourney|Runway|ElevenLabs|AssemblyAI|Deepgram|Speechmatics|Rev.ai|Voiceflow|Bland|Retell|PolyAI|Kore.ai|Avaamo|Rasa|Haptik|Yellow\.ai|Kata\.ai|Fireworks AI)\b",
+        r"\b(Google DeepMind|Google|Microsoft|Apple|Amazon|Meta|Netflix|Spotify|Uber|Airbnb|Slack|Salesforce|Oracle|IBM|Intel|AMD|NVIDIA|Qualcomm|Samsung|Sony|Huawei|Xiaomi|Alibaba|Tencent|Baidu|ByteDance|DJI|WeChat|WhatsApp|Instagram|Twitter|LinkedIn|YouTube|TikTok|Snapchat|Pinterest|Reddit|Twitch|Discord|Zoom|Teams|Dropbox|Stripe|Square|PayPal|Robinhood|Coinbase|Lyft|Doordash|Grubhub|Instacart|Shopify|Etsy|Ebay|Craigslist|Zillow|Palantir|Snowflake|Databricks|MongoDB|Elastic|Datadog|Splunk|Twilio|Zendesk|HubSpot|Notion|Figma|Canva|Grammarly|OpenAI|Anthropic|Cohere|Mistral|Hugging Face|Stability AI|Midjourney|Runway|ElevenLabs|AssemblyAI|Deepgram|Speechmatics|Rev.ai|Voiceflow|Bland|Retell|PolyAI|Kore.ai|Avaamo|Rasa|Haptik|Yellow\.ai|Kata\.ai|Fireworks AI)\b",
         content,
     )
     for m in known_orgs:

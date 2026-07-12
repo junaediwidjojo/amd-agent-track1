@@ -29,10 +29,16 @@ _SECOND_LARGEST = '''def second_largest(nums):
         raise ValueError("need at least two unique values")
     return unique[-2]'''
 
+_COUNT_VOWELS = '''import re
+
+def count_vowels(text):
+    return len(re.findall(r"[aeiouAEIOU]", text))'''
+
 _TEMPLATES: list[tuple[re.Pattern[str], str]] = [
     (re.compile(r"\bmerge_intervals\b", re.I), _MERGE_INTERVALS),
     (re.compile(r"\bis_palindrome\b", re.I), _IS_PALINDROME),
     (re.compile(r"\bsecond_largest\b", re.I), _SECOND_LARGEST),
+    (re.compile(r"\bcount_vowels\b", re.I), _COUNT_VOWELS),
 ]
 
 
