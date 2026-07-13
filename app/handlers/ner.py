@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 import re
 
-from app.fireworks.models import CompletionResult, TaskItem
+from app.backend_selector import deterministic_min_confidence
+from app.fireworks.models import CompletionResult, TaskCategory, TaskItem
 from app.handlers.base import BaseHandler
 from app.solvers.ner_solver import solve_ner
 from app.utils.json_utils import validate_json_string
@@ -28,7 +29,7 @@ class NerHandler(BaseHandler):
 
     def complete(self, task: TaskItem) -> CompletionResult:
         local = solve_ner(task.prompt)
-        if local and local[1] >= 0.85:
+        if local and local[1] >= deterministic_min_confidence(TaskCategory.NER):
             return CompletionResult(text=local[0])
         return super().complete(task)
 

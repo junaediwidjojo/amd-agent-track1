@@ -30,12 +30,14 @@ from app.solvers.fallback import solver_fallback
 from app.task_executor import TaskExecutor
 from app.task_result import TaskResult
 from app.utils.logger import get_logger, log_event
+from app.verification import is_usable_answer
 
 logger = get_logger(__name__)
 
 _RUNTIME_LIMIT_ANSWER = "Unable to process this task within runtime limit."
 _PASS2_CONFIDENCE_THRESHOLD = 0.7
 _PASS2_MIN_REMAINING_SECONDS = 45.0
+_LLM_BACKENDS = frozenset({"fireworks", "fireworks_strong"})
 
 _LOCAL_PASS2_CATEGORIES = {
     TaskCategory.SENTIMENT,
@@ -233,6 +235,26 @@ class Agent:
         return BackendType.FIREWORKS
 
     def _should_upgrade_pass2(self, prior: TaskResult, candidate: TaskResult) -> bool:
+        """Decide whether Pass-2 should replace Pass-1.
+
+        Critical rule: once a remote LLM (fireworks / fireworks_strong) was called
+        and returned a usable answer, prefer that over a prior local/deterministic
+        answer. Do not require a +0.05 confidence margin for LLM upgrades.
+        """
+        candidate_usable = is_usable_answer(candidate.answer)
+
+        if candidate.backend_used in _LLM_BACKENDS and candidate_usable:
+            # Reject clearly broken LLM output only when Pass-1 is already valid.
+            if not candidate.validation_passed and prior.validation_passed and prior.confidence >= 0.9:
+                # Still prefer LLM if prior was local/deterministic — user override.
+                if prior.backend_used not in _LLM_BACKENDS:
+                    return True
+                return False
+            return True
+
+        if not candidate_usable:
+            return False
+
         if candidate.validation_passed and not prior.validation_passed:
             return True
         if candidate.confidence > prior.confidence + 0.05:
@@ -240,6 +262,14 @@ class Agent:
         if prior.confidence < _PASS2_CONFIDENCE_THRESHOLD <= candidate.confidence:
             return True
         return False
+
+    def _should_skip_pass2(self, prior: TaskResult) -> bool:
+        """Skip Pass-2 when Pass-1 already used a remote LLM successfully."""
+        return (
+            prior.backend_used in _LLM_BACKENDS
+            and prior.validation_passed
+            and prior.confidence >= _PASS2_CONFIDENCE_THRESHOLD
+        )
 
     def _run_pass2_retries(self, tasks: list[TaskItem]) -> None:
         if self._runtime.remaining_seconds < _PASS2_MIN_REMAINING_SECONDS:
@@ -250,6 +280,7 @@ class Agent:
             for task in tasks
             if task.task_id in self._task_results
             and self._task_results[task.task_id].needs_pass2_retry(_PASS2_CONFIDENCE_THRESHOLD)
+            and not self._should_skip_pass2(self._task_results[task.task_id])
         ]
         retry_candidates.sort(key=lambda tr: tr.confidence)
 

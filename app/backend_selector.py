@@ -24,7 +24,26 @@ class BackendType(str, Enum):
     FIREWORKS_STRONG = "fireworks_strong"
 
 
-_DETERMINISTIC_MIN_CONFIDENCE = 0.95
+# Category-aware gates: math/logic/code require independently-checked solver
+# confidence (1.0). Soft extractive categories allow 0.9. Brittle labels stay strict.
+_DEFAULT_DETERMINISTIC_MIN_CONFIDENCE = 0.95
+
+
+def deterministic_min_confidence(category: TaskCategory) -> float:
+    """Minimum solver confidence to accept a deterministic backend answer."""
+    if category in (TaskCategory.SENTIMENT, TaskCategory.NER):
+        return 0.95
+    if category in (TaskCategory.SUMMARIZATION, TaskCategory.FACTUAL):
+        return 0.9
+    if category in (
+        TaskCategory.MATH,
+        TaskCategory.LOGIC,
+        TaskCategory.CODE_GENERATION,
+        TaskCategory.DEBUGGING,
+    ):
+        # Only accept when the solver itself marks an independent check (1.0).
+        return 1.0
+    return _DEFAULT_DETERMINISTIC_MIN_CONFIDENCE
 
 
 def _solver_result(category: TaskCategory, prompt: str) -> tuple[str, float] | None:
@@ -53,11 +72,16 @@ def has_deterministic_solver(
     category: TaskCategory,
     task: TaskItem,
     *,
-    min_confidence: float = _DETERMINISTIC_MIN_CONFIDENCE,
+    min_confidence: float | None = None,
 ) -> bool:
     """Return True when a high-confidence local solver can answer reliably."""
+    threshold = (
+        deterministic_min_confidence(category)
+        if min_confidence is None
+        else min_confidence
+    )
     result = _solver_result(category, task.prompt)
-    return result is not None and result[1] >= min_confidence
+    return result is not None and result[1] >= threshold
 
 
 def is_local_suitable(category: TaskCategory, settings: Settings | None = None) -> bool:

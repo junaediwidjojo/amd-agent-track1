@@ -10,7 +10,7 @@ from app.providers.base import BaseLLMProvider
 from app.providers.fireworks import FireworksProvider
 from app.providers.local import LocalProvider
 from app.utils.logger import get_logger, log_event
-from app.verification import verify_answer
+from app.verification import is_usable_answer, verify_answer
 
 logger = get_logger(__name__)
 
@@ -128,7 +128,10 @@ class HybridProvider(BaseLLMProvider):
             strong.metrics.confidence = strong_ver.confidence
             strong.metrics.backend = "fireworks_strong"
             strong.metrics.model = escalation
-            if strong_ver.confidence >= verification.confidence:
+            # Once a stronger remote LLM returns a usable answer, keep it.
+            if is_usable_answer(strong.text) and (
+                strong_ver.confidence >= verification.confidence or not is_usable_answer(result.text)
+            ):
                 return strong
         return result
 

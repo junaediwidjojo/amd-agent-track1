@@ -79,3 +79,14 @@ def test_verify_summarization_rejects_generic() -> None:
     task = TaskItem(task_id="s2", prompt="Summarize in one sentence: Hello world.")
     result = verify_answer("Unable to process this task.", task, TaskCategory.SUMMARIZATION)
     assert not result.passed
+
+
+def test_verify_math_heuristic_match_is_soft() -> None:
+    """Matching a heuristic (non-1.0) solver must not lock in at 0.95."""
+    task = TaskItem(
+        task_id="m4",
+        prompt="A store has 100 items and sells 15% of them. How many remain?",
+    )
+    result = verify_answer("85", task, TaskCategory.MATH)
+    assert result.passed
+    assert result.confidence < 0.95

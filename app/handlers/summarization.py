@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import re
 
-from app.fireworks.models import CompletionResult, TaskItem
+from app.backend_selector import deterministic_min_confidence
+from app.fireworks.models import CompletionResult, TaskCategory, TaskItem
 from app.solvers.summarization_solver import solve_summarization
 from app.handlers.base import BaseHandler
 from app.utils.text_utils import extract_last_sentence, strip_cot
@@ -24,7 +25,7 @@ class SummarizationHandler(BaseHandler):
 
     def complete(self, task: TaskItem) -> CompletionResult:
         local = solve_summarization(task.prompt)
-        if local and local[1] >= 0.9:
+        if local and local[1] >= deterministic_min_confidence(TaskCategory.SUMMARIZATION):
             return CompletionResult(text=local[0])
         return super().complete(task)
 

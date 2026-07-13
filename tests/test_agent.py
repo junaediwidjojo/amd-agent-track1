@@ -80,3 +80,70 @@ def test_runtime_budget_skips_remaining_tasks(mock_hybrid_provider: MagicMock) -
     assert agent.runtime_budget_exceeded is True
     assert results[0].answer == "answer"
     assert "runtime limit" in results[1].answer.lower()
+
+
+def test_should_upgrade_pass2_prefers_usable_llm(mock_hybrid_provider: MagicMock) -> None:
+    """Usable Fireworks Pass-2 should replace lower-confidence Pass-1 without +0.05 margin."""
+    from app.task_result import TaskResult
+
+    agent = Agent(provider=mock_hybrid_provider)
+    prior = TaskResult(
+        task_id="t1",
+        answer="local answer",
+        confidence=0.68,
+        backend_used="local",
+        pass_number=1,
+        category=TaskCategory.FACTUAL,
+        validation_passed=True,
+    )
+    candidate = TaskResult(
+        task_id="t1",
+        answer="llm answer that is better",
+        confidence=0.70,
+        backend_used="fireworks",
+        pass_number=2,
+        category=TaskCategory.FACTUAL,
+        validation_passed=True,
+    )
+    assert agent._should_upgrade_pass2(prior, candidate) is True
+
+
+def test_should_upgrade_pass2_rejects_placeholder_llm(mock_hybrid_provider: MagicMock) -> None:
+    from app.task_result import TaskResult
+
+    agent = Agent(provider=mock_hybrid_provider)
+    prior = TaskResult(
+        task_id="t2",
+        answer="valid local answer",
+        confidence=0.8,
+        backend_used="deterministic",
+        pass_number=1,
+        category=TaskCategory.MATH,
+        validation_passed=True,
+    )
+    candidate = TaskResult(
+        task_id="t2",
+        answer="Unable to process this task.",
+        confidence=0.2,
+        backend_used="fireworks",
+        pass_number=2,
+        category=TaskCategory.MATH,
+        validation_passed=False,
+    )
+    assert agent._should_upgrade_pass2(prior, candidate) is False
+
+
+def test_should_skip_pass2_for_successful_fireworks(mock_hybrid_provider: MagicMock) -> None:
+    from app.task_result import TaskResult
+
+    agent = Agent(provider=mock_hybrid_provider)
+    prior = TaskResult(
+        task_id="t3",
+        answer="already good",
+        confidence=0.85,
+        backend_used="fireworks",
+        pass_number=1,
+        category=TaskCategory.FACTUAL,
+        validation_passed=True,
+    )
+    assert agent._should_skip_pass2(prior) is True

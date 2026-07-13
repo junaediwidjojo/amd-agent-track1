@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import re
 
-from app.fireworks.models import CompletionResult, TaskItem
+from app.backend_selector import deterministic_min_confidence
+from app.fireworks.models import CompletionResult, TaskCategory, TaskItem
 from app.handlers.base import BaseHandler
 from app.solvers.codegen_solver import solve_codegen
 from app.utils.json_utils import warn_if_reasoning_leak
@@ -24,7 +25,7 @@ class CodeGenerationHandler(BaseHandler):
 
     def complete(self, task: TaskItem) -> CompletionResult:
         local = solve_codegen(task.prompt)
-        if local and local[1] >= 0.9:
+        if local and local[1] >= deterministic_min_confidence(TaskCategory.CODE_GENERATION):
             return CompletionResult(text=local[0])
         return super().complete(task)
 

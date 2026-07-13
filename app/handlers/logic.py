@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import re
 
-from app.fireworks.models import CompletionResult, TaskItem
+from app.backend_selector import deterministic_min_confidence
+from app.fireworks.models import CompletionResult, TaskCategory, TaskItem
 from app.handlers.base import BaseHandler
 from app.solvers.logic_solver import solve_logic
 from app.utils.text_utils import extract_final_answer
@@ -26,14 +27,12 @@ class LogicHandler(BaseHandler):
 
     def complete(self, task: TaskItem) -> CompletionResult:
         local = solve_logic(task.prompt)
-        if local and local[1] >= 0.9:
+        if local and local[1] >= deterministic_min_confidence(TaskCategory.LOGIC):
             return CompletionResult(text=local[0])
         return super().complete(task)
 
     def post_process(self, text: str, task: TaskItem) -> str:
-        local = solve_logic(task.prompt)
-        if local and local[1] >= 0.9:
-            return local[0]
+        # Do not override a usable LLM answer with the deterministic solver.
         if "name-place" in task.prompt.lower().replace(" ", ""):
             matches = re.findall(r"([A-Z][a-z]+)-(First|Second|Third)", text, re.IGNORECASE)
             if len(matches) >= 3:

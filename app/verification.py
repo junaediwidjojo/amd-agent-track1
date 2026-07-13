@@ -63,6 +63,14 @@ def _is_generic_failure(text: str) -> bool:
     return any(phrase in lower for phrase in _GENERIC_FAILURE_PHRASES)
 
 
+def is_usable_answer(answer: str) -> bool:
+    """True when an answer is non-empty and not a runtime/error placeholder."""
+    text = (answer or "").strip()
+    if not text or text == "No answer generated.":
+        return False
+    return not _is_generic_failure(text)
+
+
 def _wants_one_sentence(prompt: str) -> bool:
     return bool(re.search(r"\bin one sentence\b|\bexactly one sentence\b", prompt, re.I))
 
@@ -200,7 +208,12 @@ def _verify_math(answer: str, task: TaskItem) -> VerificationResult:
         expected, solver_conf = solver[0].strip().replace(",", ""), solver[1]
         actual = numbers[-1]
         if actual == expected or actual.rstrip("0").rstrip(".") == expected.rstrip("0").rstrip("."):
-            return _pass(0.95)
+            # Only treat agreement as lock-in-grade when the solver itself was
+            # independently checked (conf 1.0). Heuristic matches stay softer so
+            # a deterministic self-check cannot freeze a wrong answer at 0.95.
+            if solver_conf >= 1.0:
+                return _pass(0.95)
+            return _pass(0.78)
         if solver_conf >= 0.95:
             return _fail("solver_mismatch", confidence=0.4, backend="fireworks_strong")
         return _pass(0.72)
@@ -225,7 +238,9 @@ def _verify_logic(answer: str, task: TaskItem) -> VerificationResult:
         actual = text.lower().replace(" ", "")
         expected_compact = expected.replace(" ", "")
         if actual == expected or expected_compact in actual or actual in expected_compact:
-            return _pass(0.95)
+            if solver_conf >= 1.0:
+                return _pass(0.95)
+            return _pass(0.78)
         if solver_conf >= 0.9:
             return _fail("solver_mismatch", confidence=0.35, backend="fireworks_strong")
         return _pass(0.7)

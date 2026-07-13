@@ -14,11 +14,12 @@ from app.refinement import build_refinement_prompt, refine_answer
 from app.runtime_manager import RuntimeManager
 from app.solvers.fallback import solver_fallback
 from app.utils.logger import get_logger, log_event
-from app.verification import VerificationResult, verify_answer
+from app.verification import VerificationResult, is_usable_answer, verify_answer
 
 logger = get_logger(__name__)
 
 _EMERGENCY_ANSWER = "Unable to process this task within runtime limit."
+_LLM_BACKENDS = frozenset({"fireworks", "fireworks_strong"})
 
 
 @dataclass
@@ -56,6 +57,17 @@ class TaskExecutor:
         self.provider = provider
         self.runtime = runtime
         self.settings = get_settings()
+
+    @staticmethod
+    def _prefer_candidate(candidate: _Candidate, current_best: _Candidate) -> bool:
+        """Prefer a usable remote LLM answer over local/deterministic once called."""
+        cand_llm = candidate.backend in _LLM_BACKENDS and is_usable_answer(candidate.answer)
+        best_llm = current_best.backend in _LLM_BACKENDS and is_usable_answer(current_best.answer)
+        if cand_llm and not best_llm:
+            return True
+        if best_llm and not cand_llm:
+            return False
+        return candidate.verification.confidence > current_best.verification.confidence
 
     def execute(
         self,
@@ -95,14 +107,20 @@ class TaskExecutor:
             candidate_metrics = candidate.metrics
             candidate_metrics.confidence = verification.confidence
 
-            self.runtime.record_backend(current_backend.value)
-            entry = _Candidate(answer, candidate_metrics, current_backend.value, verification)
+            # If local/deterministic path actually invoked a remote LLM, record that.
+            recorded_backend = current_backend.value
+            metrics_backend = (candidate_metrics.backend or "").strip()
+            if metrics_backend in _LLM_BACKENDS:
+                recorded_backend = metrics_backend
 
-            if best is None or entry.verification.confidence > best.verification.confidence:
+            self.runtime.record_backend(recorded_backend)
+            entry = _Candidate(answer, candidate_metrics, recorded_backend, verification)
+
+            if best is None or self._prefer_candidate(entry, best):
                 best = entry
 
             self._log_task(
-                task, category, current_backend.value, verification, retry_count, escalation_reason,
+                task, category, recorded_backend, verification, retry_count, escalation_reason,
                 candidate_metrics.latency_ms,
             )
 
@@ -113,7 +131,7 @@ class TaskExecutor:
                     metrics=candidate_metrics,
                     category=category,
                     verification=verification,
-                    backend=current_backend.value,
+                    backend=recorded_backend,
                     retry_count=retry_count,
                     escalation_reason=escalation_reason,
                     latency_ms=latency,
@@ -129,7 +147,10 @@ class TaskExecutor:
                     self.runtime.record_retry()
                     refined_answer = handler.post_process(refined, task).strip()
                     refined_ver = verify_answer(refined_answer, task, category)
-                    if refined_ver.confidence > (best.verification.confidence if best else 0):
+                    if best is None or self._prefer_candidate(
+                        _Candidate(refined_answer, candidate_metrics, current_backend.value, refined_ver),
+                        best,
+                    ):
                         best = _Candidate(refined_answer, candidate_metrics, current_backend.value, refined_ver)
                     if refined_ver.passed:
                         latency = (time.perf_counter() - started) * 1000
@@ -155,8 +176,11 @@ class TaskExecutor:
                     )
                     retry_answer = handler.post_process(retry_result.text, task).strip()
                     retry_ver = verify_answer(retry_answer, task, category)
-                    if retry_ver.confidence > (best.verification.confidence if best else 0):
-                        best = _Candidate(retry_answer, retry_result.metrics, current_backend.value, retry_ver)
+                    retry_entry = _Candidate(
+                        retry_answer, retry_result.metrics, current_backend.value, retry_ver,
+                    )
+                    if best is None or self._prefer_candidate(retry_entry, best):
+                        best = retry_entry
                     if retry_ver.passed:
                         latency = (time.perf_counter() - started) * 1000
                         return TaskExecutionResult(
