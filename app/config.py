@@ -24,11 +24,12 @@ class Settings(BaseSettings):
     input_path: str = Field(default="/input/tasks.json", alias="INPUT_PATH")
     output_path: str = Field(default="/output/results.json", alias="OUTPUT_PATH")
 
-    request_timeout_seconds: float = Field(default=25.0)
-    max_retries: int = Field(default=2)
+    request_timeout_seconds: float = Field(default=20.0)
+    max_retries: int = Field(default=1)
     retry_backoff_base: float = Field(default=0.5)
     prompt_cache_enabled: bool = Field(default=False)
-    max_runtime_seconds: float = Field(default=540.0, alias="MAX_RUNTIME_SECONDS")
+    # Finish before the 10-minute grading kill; keep ~2 min buffer.
+    max_runtime_seconds: float = Field(default=480.0, alias="MAX_RUNTIME_SECONDS")
 
     # Local inference settings
     enable_local_model: bool = Field(default=True, alias="ENABLE_LOCAL_MODEL")
@@ -36,7 +37,7 @@ class Settings(BaseSettings):
     local_n_ctx: int = Field(default=2048, alias="LOCAL_N_CTX")
     local_n_threads: int = Field(default=2, alias="LOCAL_N_THREADS")
     local_call_timeout_seconds: float = Field(
-        default=18.0, alias="LOCAL_CALL_TIMEOUT_SECONDS"
+        default=10.0, alias="LOCAL_CALL_TIMEOUT_SECONDS"
     )
     local_categories: str = Field(
         default="sentiment,summarization,ner,factual",

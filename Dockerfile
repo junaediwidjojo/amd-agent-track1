@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1
 
+# Callers: docker buildx / LabLab grading. User: reduce timeout to 8 min, build only (no push).
+
 FROM python:3.12-slim AS builder
 
 WORKDIR /build
@@ -33,6 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
+# Stable path ENVs first so GGUF download stays cacheable when budgets change.
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app \
@@ -40,16 +43,18 @@ ENV PYTHONUNBUFFERED=1 \
     LOCAL_MODEL_PATH=/app/models/qwen2.5-1.5b-instruct-q4_k_m.gguf \
     LOCAL_N_CTX=2048 \
     LOCAL_N_THREADS=2 \
-    LOCAL_CALL_TIMEOUT_SECONDS=18 \
     LOCAL_CATEGORIES=sentiment,summarization,ner,factual \
     LOCAL_CONFIDENCE_THRESHOLD=0.75 \
-    PROMPT_CACHE_ENABLED=false \
-    MAX_RUNTIME_SECONDS=600
+    PROMPT_CACHE_ENABLED=false
 
 RUN mkdir -p /input /output /app/models
 
 ARG GGUF_URL=https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf
 RUN curl -fL --retry 3 --retry-delay 5 -o /app/models/qwen2.5-1.5b-instruct-q4_k_m.gguf "$GGUF_URL"
+
+# Tunables after model layer — changing these must not re-download the GGUF.
+ENV LOCAL_CALL_TIMEOUT_SECONDS=10 \
+    MAX_RUNTIME_SECONDS=480
 
 COPY --from=builder /install /usr/local
 COPY app/ /app/app/

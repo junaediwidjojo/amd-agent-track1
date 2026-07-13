@@ -1,4 +1,8 @@
-"""Runtime budget tracking and retry policy for the agent pipeline."""
+"""Runtime budget tracking and retry policy for the agent pipeline.
+
+Callers: app/agent.py, app/task_executor.py, app/backend_selector.py, tests.
+User: reduce timeout to 8 minutes and fix grading timeout; build image, don't push.
+"""
 
 from __future__ import annotations
 
@@ -10,10 +14,10 @@ from enum import Enum
 class RuntimePhase(str, Enum):
     """Time-budget phase controlling retry and escalation behavior."""
 
-    NORMAL = "normal"  # >300s remaining
-    SELECTIVE_RETRY = "selective_retry"  # 120-300s
-    CONSERVATIVE = "conservative"  # 30-120s
-    EMERGENCY = "emergency"  # <30s
+    NORMAL = "normal"
+    SELECTIVE_RETRY = "selective_retry"
+    CONSERVATIVE = "conservative"
+    EMERGENCY = "emergency"
 
 
 @dataclass
@@ -30,7 +34,11 @@ class RuntimeStats:
 
 
 class RuntimeManager:
-    """Track elapsed runtime and gate retries/escalation by remaining budget."""
+    """Track elapsed runtime and gate retries/escalation by remaining budget.
+
+    Phase thresholds scale with ``max_runtime_seconds`` so an 8-minute budget
+    still leaves room for selective retries without burning the grading kill.
+    """
 
     def __init__(self, max_runtime_seconds: float) -> None:
         self.max_runtime_seconds = max_runtime_seconds
@@ -54,13 +62,25 @@ class RuntimeManager:
         return max(0.0, self.max_runtime_seconds - self.elapsed_seconds)
 
     @property
+    def _emergency_threshold(self) -> float:
+        return max(20.0, self.max_runtime_seconds * 0.06)
+
+    @property
+    def _conservative_threshold(self) -> float:
+        return max(60.0, self.max_runtime_seconds * 0.25)
+
+    @property
+    def _selective_threshold(self) -> float:
+        return max(120.0, self.max_runtime_seconds * 0.55)
+
+    @property
     def phase(self) -> RuntimePhase:
         remaining = self.remaining_seconds
-        if remaining < 30:
+        if remaining < self._emergency_threshold:
             return RuntimePhase.EMERGENCY
-        if remaining < 120:
+        if remaining < self._conservative_threshold:
             return RuntimePhase.CONSERVATIVE
-        if remaining < 300:
+        if remaining < self._selective_threshold:
             return RuntimePhase.SELECTIVE_RETRY
         return RuntimePhase.NORMAL
 
@@ -90,6 +110,10 @@ class RuntimeManager:
     def is_emergency(self) -> bool:
         return self.phase == RuntimePhase.EMERGENCY
 
+    def allow_local(self) -> bool:
+        """Local CPU inference only in NORMAL — otherwise it burns wall time."""
+        return self.phase == RuntimePhase.NORMAL and not self.is_budget_exceeded()
+
     def allow_retries(self, uncertain: bool = False) -> bool:
         phase = self.phase
         if phase == RuntimePhase.EMERGENCY:
@@ -112,8 +136,8 @@ class RuntimeManager:
         if self.phase == RuntimePhase.SELECTIVE_RETRY:
             return 1 if uncertain else 0
         if self.allow_expensive_retry():
-            return 2
-        return 1
+            return 1
+        return 0
 
     def record_retry(self) -> None:
         self.stats.retries += 1

@@ -36,7 +36,8 @@ logger = get_logger(__name__)
 
 _RUNTIME_LIMIT_ANSWER = "Unable to process this task within runtime limit."
 _PASS2_CONFIDENCE_THRESHOLD = 0.7
-_PASS2_MIN_REMAINING_SECONDS = 45.0
+_PASS2_MIN_REMAINING_SECONDS = 40.0
+_PASS2_MAX_RETRIES = 5
 _LLM_BACKENDS = frozenset({"fireworks", "fireworks_strong"})
 
 _LOCAL_PASS2_CATEGORIES = {
@@ -283,6 +284,7 @@ class Agent:
             and not self._should_skip_pass2(self._task_results[task.task_id])
         ]
         retry_candidates.sort(key=lambda tr: tr.confidence)
+        retry_candidates = retry_candidates[:_PASS2_MAX_RETRIES]
 
         for prior in retry_candidates:
             if self._runtime_budget_exceeded():

@@ -15,5 +15,5 @@ services:
       - OUTPUT_PATH=/output/results.json
       - LOCAL_CATEGORIES=sentiment,summarization,ner
       - PROMPT_CACHE_ENABLED=false
-      - MAX_RUNTIME_SECONDS=600
+      - MAX_RUNTIME_SECONDS=480
       - LOCAL_N_CTX=2048

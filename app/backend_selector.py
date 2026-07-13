@@ -104,7 +104,7 @@ def select_backend_order(
         order.append(BackendType.DETERMINISTIC)
 
     if is_local_suitable(category, settings) and settings.enable_local_model:
-        if not runtime.is_emergency():
+        if runtime.allow_local():
             order.append(BackendType.LOCAL)
 
     if runtime.is_emergency():
